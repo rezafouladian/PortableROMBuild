@@ -42,11 +42,11 @@ DskVerify       EQU         $12C
 LoadTrap        EQU         $12D
 MmInOK          EQU         $12E
 SysEvtMask      EQU         $144
-JKybdTask       EQU         $21A
-StkLowPt        EQU         $110
-Ticks           EQU         $16A
-MBState         EQU         $172
-MBTicks         EQU         $16E
+JKybdTask       EQU         $21A                    ; Keyboard VBL task hook [pointer]
+StkLowPt        EQU         $110                    ; Lowest stack as measured in VBL task [pointer]
+Ticks           EQU         $16A                    ; Tick count, time since boot [long]
+MBState         EQU         $172                    ; Current mouse button state [byte]
+MBTicks         EQU         $16E                    ; Tick count at last mouse button press [long]
 SysFontFam      EQU         $BA6
 WidthTabHandle  EQU         $B2A
 TESysJust       EQU         $BAC
@@ -56,7 +56,7 @@ AlarmSt         EQU         $21F
 GNEFilter       EQU         $29A
 KeyThresh       EQU         $18E
 KeyRepThresh    EQU         $190
-KeyRepTime      EQU         $18A
+KeyRepTime      EQU         $18A                    ; Tick count when key was last repeated [long]
 
 
 
