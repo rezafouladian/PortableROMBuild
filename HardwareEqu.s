@@ -57,12 +57,25 @@ GNEFilter       EQU         $29A
 KeyThresh       EQU         $18E
 KeyRepThresh    EQU         $190
 KeyRepTime      EQU         $18A                    ; Tick count when key was last repeated [long]
+DoubleTime      EQU         $2F0
+CaretTime       EQU         $2F4
+SPClikCaret     EQU         $209
+SPKbd           EQU         $206
+DiskVars_FlEvtMask  EQU     $25E
+IAZNotify       EQU         $33C
+AlarmState      EQU         $21F
+Lev1AutoVector  EQU         $64
+TimeDBRA        EQU         $D00
+
 
 
 
 VIA_Base        EQU         $F70000
 VIA_IFR         EQU         $F71A00
 VIA_IER         EQU         $F71C00
+VIA_ACR         EQU         $F71600
+VIA_T2_H        EQU         $F71200
+VIA_T2_L        EQU         $F71000
 
 SCCWBase        EQU         $FD8000
 

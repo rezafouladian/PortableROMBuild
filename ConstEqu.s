@@ -8,6 +8,7 @@ IWMInitMode     EQU         $17
 TROMCode        EQU         $55AAAA55
 
 powerCntl       EQU         $10
+pMgrADBoff      EQU         $21                     ; Turn ADB auto-poll off
 timeRead        EQU         $38                     ; Read the time from the clock chip
 
 bkLim           EQU         $0                      ; Last block in zone [pointer}
@@ -33,25 +34,26 @@ vEnvInt         EQU         $68                     ; Vector to environment inte
 BatVBLTask      EQU         $82                     ; Battery monitor VBL task
 SwVBLTask       EQU         $90                     ; Sound Watch (SndWatch) VBL task
 
-pMgrADBoff      EQU         $21
-
 PmgrPramBase    EQU         $70
-SlpTimeOut      EQU         $70
-HDTimeOut       EQU         $71
+SlpTimeOut      EQU         $70                     ; Sleep timeout, in seconds/15
+HDTimeOut       EQU         $71                     ; Hard disk timeout, in seconds/15
 PmgrStatusFlags EQU         $72
 PmgrOtherFlags  EQU         $73
-Brightness      EQU         $74
-VidMode         EQU         $75
+Brightness      EQU         $74                     ; Brightness level
+VidMode         EQU         $75                     ; Video mode
 
-DfltHDTime      EQU         4*60/15
-DfltSlpTime     EQU         8*60/15
+DfltHDTime      EQU         4*60/15                 ; Default number of minutes before HD spin down timeout (4 min)
+DfltSlpTime     EQU         8*60/15                 ; Default number of minutes before sleep timeout (8 min)
 
-idlespeed       EQU         1
-CPUSpeed16MHz   EQU         16
+idlespeed       EQU         1                       ; Idle speed (1MHz equivalent)
+CPUSpeed16MHz   EQU         16                      ; 16MHz CPU Speed
 
-SndWFreq        EQU         60*10
-BatFreq         EQU         60*1
+SndWFreq        EQU         60*10                   ; Sound Watch (SndWatch) VBL is called every 10 seconds
+BatFreq         EQU         60*1                    ; Battery level monitor VBL is called every second
 
 FBDBSize        EQU         370
 
 hcVideoSize     EQU         8000
+
+boxSE           EQU         $FF
+boxPortable     EQU         4
