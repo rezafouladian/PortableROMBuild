@@ -88,7 +88,7 @@ StartInit1:
             bsr.w   SetUpTimeK                      ; Initialize TimeDBRA and TimeSCCDB
             bsr.w   VIATimerEnables
             clr.b   MMUType
-            movem.l TROM2,D0/A0
+            movem.l DiagROM1,D0/A0
             cmpi.l  #TROMCode,D0
             bne.b   .L3
             lea     BootRetry,A1
@@ -579,4 +579,192 @@ VIAIntForTimeDBRA:
             move.w  D0,TimeDBRA
             movea.l D1,SP
             andi    #$F8FF,SR                       ; Enable interrupts
+
+
+            IF PortableAbs
+            org     $9009BA
+            ENDIF
+TMVectors:
+            dc.l    $2000                           ; Initial stack pointer
+            dc.l    StartTest1                      ; Initial program counter
+            dc.l    BusError                        ; Bus error veector
+            dc.l    AdrError                        ; Address error vector
+            dc.l    IllError                        ; Illegal instruction error vector
+            dc.l    ZerError
+            dc.l    ChkError
+            dc.l    TrapV
+            dc.l    PrivError
+            dc.l    Trace
+            dc.l    LineA
+            dc.l    LineF
+            dc.l    Unassigned
+            dc.l    CPProtocol
+            dc.l    FormatX
+            dc.l    SpurInterrupt
+            dc.l    Unassigned
+            dc.l    Unassigned
+            dc.l    Unassigned
+            dc.l    Unassigned
+            dc.l    Unassigned
+            dc.l    Unassigned
+            dc.l    Unassigned
+            dc.l    Unassigned
+            dc.l    SpurInterrupt
+            dc.l    IntLevel1
+            dc.l    IntLevel2
+            dc.l    IntLevel3
+            dc.l    IntLevel4
+            dc.l    IntLevel5
+            dc.l    IntLevel6
+            dc.l    IntLevel7
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    TrapInst
+            dc.l    FPCP1
+            dc.l    FPCP2
+            dc.l    FPCP3
+            dc.l    FPCP4
+            dc.l    FPCP5
+            dc.l    FPCP6
+            dc.l    FPCP7
+            dc.l    Unassigned
+            dc.l    PMMUConfig
+            dc.l    PMMUIllegal
+            dc.l    PMMUAccess
+            dc.l    Unassigned
+            dc.l    Unassigned
+            dc.l    Unassigned
+            dc.l    Unassigned
+            dc.l    Unassigned
+BusError:
+            btst.l  #beok,D7                        ; Are bus errors expected?
+            beq.b   .L1
+            movea.l A5,SP
+            jmp     (A6)
+.L1:
+            ori.w   #BECode,D7
+            bra.w   ExceptionHandler
+AdrError:
+            ori.w   #ADCode,D7
+            bra.w   ExceptionHandler
+IllError:
+            ori.w   #ILCode,D7
+            bra.w   ExceptionHandler
+ZerError:
+            ori.w   #ZDCode,D7
+            bra.w   ExceptionHandler
+ChkError:
+            ori.w   #CICode,D7
+            bra.w   ExceptionHandler
+
+ExceptionHandler:
+            bset.l  #excp,D7                        ; Set exception flag
+            move.l  SP,D6                           ; Save stack pointer
+            movea.w #$2000,SP                       ; Initialize stack pointer
+            jmp     Error1Handler                   ; Handle error
+            IF PortableAbs
+            org     $900BBC
+            ENDIF
+StartTest1:
+            movea.w #$2000,SP                       ; Initialize stack pointer
+            moveq   #0,D7                           ; Clear flags register
+            moveq   #0,D6                           ; Clear minor error register
+            lea     TMVectors,A0                    ; Get address of vectors
+            suba.l  A1,A1                           ; Clear A1
+            move.w  #63,D0                          ; Number of vectors
+.VectorLoop:
+            move.l  (A0)+,(A1)+
+            dbf     D0,.VectorLoop
+            move    #$2300,SR                       ; Allow SCC interrupts
+            move.l  #TROMCode,D1
+            move.l  DiagROM,D0
+            cmp.l   D1,D0
+            bne.b   VIASetup
+            lea     VIASetup,A1
+            movem.l DiagROM,D0/A0
+            jmp     (A0)
+VIASetup:
+            bclr.l  #beok,D7
+            moveq   #0,D1
+            move.w  #ErrVIA1,D7
+            lea     VIA_Base,A1
+            bset.b  #PMreq,(VIA_BufB-VIA_Base,A1)
+            move.b  #%10111001,(VIA_DDR_B-VIA_Base,A1)
+            bclr.b  #SyncM,(VIA_BufB-VIA_Base,A1)
+            lea     VIA_Base,A2
+            btst.b  #TestJumper,(VIA_BufB-VIA_Base,A2)  ; Is the test "jumper" installed?
+            bne.b   PowerManagerInit
+            bset.l  #test,D7                            ; Jumper found, flag bit for later
+PowerManagerInit:
+            move.w  #ErrPmgrTurnOn,D7
+            lea     .L1,A6
+            move.w  #powerCntl*$100+1,D0
+            move.l  #(1<<pTurnOn)*$1000000,D1
+            jmp     QuasiPwrMgr
+.L1:
+            move.w  A0,D6
+            tst.l   D6
+            bne.w   Error1Handler
+            lea     .L2,A6
+            move.w  #powerCntl*$100+1,D0
+            move.l  #(1<<pTurnOn|1<<pMinus5V|1<<pSerDrvr|1<<pSCC|1<<pIWM)*1000000,D1
+            jmp     QuasiPwrMgr
+.L2:
+            move.w  A0,D6
+            tst.l   D6
+            bne.w   Error1Handler
+            move.w  #ErrROM,D7
+            lea     .L3,A6
+            jmp     StartUpROMTest
+.L3:
+            tst.l   D6
+            bne.w   Error1Handler
+            clr.w   D7
+            move.w  #ErrPmgrSt,D7
+            move.w  #PmgrSelfTest*$100+0,D0
+            lea     .L4,A6
+            jmp     QuasiPwrMgr
+.L4:
+            move.w  A0,D6
+            swap    D6
+            move.w  D1,D6
+            swap    D6
+            tst.l   D6
+            bne.w   Error1Handler
+            move.w  #ErrVidAddr,D7
+            lea     .L5,A6
+            jmp     VramAddrTest
+.L5:
+            tst.l   D6
+            bne.w   Error1Handler
+            move.w  #ErrVidRAM,D7
+            lea     .L6,A6
+            jmp     VramDataTest
+.L6:
+            tst.l   D6
+            bne.w   Error1Handler
+            lea     Sound_Base,SP
+            move.w  #readINT*$100+0,D0
+            lea     .L7,A6
+            jmp     QuasiPwrMgr
+.L7:
+            btst.l  #oneSecIntFlag,D1
+            beq.b   .L8
+            clr.l   WarmStart
+.L8:
+            move.w  #ErrSCSI,D7
+
 

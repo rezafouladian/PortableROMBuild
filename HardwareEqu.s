@@ -74,11 +74,13 @@ VBLQueue        EQU         $160
 
 
 VIA_Base        EQU         $F70000
+VIA_BufB        EQU         $F70000
 VIA_IFR         EQU         $F71A00
 VIA_IER         EQU         $F71C00
 VIA_ACR         EQU         $F71600
 VIA_T2_H        EQU         $F71200
 VIA_T2_L        EQU         $F71000
+VIA_DDR_B       EQU         $F70400
 
 SCCWBase        EQU         $FD8000
 
@@ -89,8 +91,8 @@ SCSIwrite       EQU         $F90001
 sICRread        EQU         $F90010
 sICRwrite       EQU         $F90011
 
-TROM1           EQU         $F80000
-TROM2           EQU         $F80080
+DiagROM         EQU         $F80000
+DiagROM1        EQU         $F80080
 
 Video_Base      EQU         $FA8000
 

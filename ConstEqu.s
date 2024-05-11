@@ -10,6 +10,17 @@ TROMCode        EQU         $55AAAA55
 powerCntl       EQU         $10
 pMgrADBoff      EQU         $21                     ; Turn ADB auto-poll off
 timeRead        EQU         $38                     ; Read the time from the clock chip
+readINT         EQU         $78
+PmgrSelfTest    EQU         $EC
+
+pIWM            EQU         0
+pSCC            EQU         1
+pHD             EQU         2
+pModem          EQU         3
+pSerDrvr        EQU         4
+pASC            EQU         5
+pMinus5V        EQU         6
+pTurnOn         EQU         7
 
 bkLim           EQU         $0                      ; Last block in zone [pointer}
 
@@ -62,3 +73,32 @@ cpu68000        EQU         0
 cpu68010        EQU         1
 cpu68020        EQU         2
 cpu68030        EQU         3
+
+PMreq           EQU         0                       ; Power manager handshake request
+TestJumper      EQU         2                       ; Test jumper
+SyncM           EQU         3                       ; Synchronous modem support
+                                                    ; 0 = original Macintosh configuration
+                                                    ; 1 = synchronous modem support, SCC channel A
+
+ErrROM          EQU         $0001
+ErrVIA1         EQU         $0006
+ErrSCSI         EQU         $000B
+ErrIWM          EQU         $000C
+ErrPmgrSt       EQU         $0010
+ErrPmgrTurnOn   EQU         $0014
+ErrVidRAM       EQU         $0082
+ErrVidAddr      EQU         $0083
+
+BECode          EQU         $0100                   ; Bus error exception code
+ADCode          EQU         $0200                   ; Address error exception code
+ILCode          EQU         $0300                   ; Illegal instruction error exception code
+ZDCode          EQU         $0400                   ; Zero divide error exception code
+CICode          EQU         $0500
+TPCode          EQU         $0600
+PVCode          EQU         $0700
+
+excp            EQU         24
+test            EQU         26
+beok            EQU         27
+
+oneSecIntFlag   EQU         27

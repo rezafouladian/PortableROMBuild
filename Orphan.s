@@ -18,12 +18,6 @@ WakeUp:
             move    #$2700,SR
             movea.l PowerMgrVars,A2
 
-            org     $900BBC
-StartTest1:
-            movea.w #$2000,SP
-            moveq   #0,D7
-            moveq   #0,D6
-
             org     $90079E
 InitVIA:
             movea.l #VIA_Base,A0
