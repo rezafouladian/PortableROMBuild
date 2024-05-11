@@ -57,3 +57,8 @@ hcVideoSize     EQU         8000
 
 boxSE           EQU         $FF
 boxPortable     EQU         4
+
+cpu68000        EQU         0
+cpu68010        EQU         1
+cpu68020        EQU         2
+cpu68030        EQU         3

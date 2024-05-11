@@ -492,35 +492,43 @@ GetPRAM:
             IF PortableAbs
             org     $9005B2
             ENDIF
+; WhichCPU
+;
+; Determines which CPU is installed.
+; 
+; 0 = 68000
+; 1 = 68010
+; 2 = 68020
+; 3 = 68030
 WhichCPU:
-            lea     $10,A1
-            move.l  (A1),-(SP)
-            lea     .L1,A0
-            move.l  A0,(A1)
+            lea     IllegalInstructionVector,A1
+            move.l  (A1),-(SP)                      ; Save the vector
+            lea     .ILException,A0                 
+            move.l  A0,(A1)                         ; Replace it with our exception handler
             movea.l SP,A0
             clr.w   -(SP)
-            moveq   #2,D7
+            moveq   #cpu68020,D7
             move.w  #$2909,D0
             dc.l    $4E7B0002
             ; ^ movec   D0,CACR
             dc.l    $4E7A0002
             ;^ movec   CACR,D0
-            bclr.l  #8,D0
+            bclr.l  #8,D0                           ; Clear Enable Data Cache bit
             beq.b   .L2
             dc.l    $4E7B0002
             ; ^ movec   D0,CACR
-            moveq   #3,D7
+            moveq   #cpu68030,D7
             bra.b   .L2
-.L1:
-            moveq   #1,D7
+; If we're here then an exception occurred and the CPU is a 68000 or 68010
+.ILException:
+            moveq   #cpu68010,D7
             cmpi.w  #$10,($6,SP)
             beq.b   .L2
-            moveq   #0,D7
+            moveq   #cpu68000,D7
 .L2:
             movea.l A0,SP
-            move.l  (SP)+,(A1)
+            move.l  (SP)+,(A1)                      ; Restore the exception handler
             rts
-
             IF PortableAbs
             org     $9005F0
             ENDIF

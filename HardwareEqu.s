@@ -66,6 +66,7 @@ IAZNotify       EQU         $33C
 AlarmState      EQU         $21F
 Lev1AutoVector  EQU         $64
 TimeDBRA        EQU         $D00
+IllegalInstructionVector    EQU $10
 
 
 
