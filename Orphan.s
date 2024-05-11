@@ -140,3 +140,25 @@ ADBProc:
 
             org     $905678
 FDBShiftInt_VIA2:
+
+            org     $91642E
+NMGNEFilter:
+
+            org     $90087A
+InitCrsrVars:
+
+            org     $90651E
+FSIODNETbl:
+    
+            org     $900718
+InitSCSIGlobals:
+
+            org     $900794
+InitVIAGlobals:
+
+            org     $90074A
+InitIWMGlobals:
+
+            org     $9007D4
+InitSCCGlobals:
+    
