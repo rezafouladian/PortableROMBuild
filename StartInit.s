@@ -524,21 +524,49 @@ WhichCPU:
             IF PortableAbs
             org     $9005F0
             ENDIF
+; WhichBoard
+;
+; Determine the logic board (BoxFlag) and put it in the high word of D7.
 WhichBoard:
-            swap    D7
-            clr.w   D7
-            move.b  #-1,D7
-            lea     .L1,A0
+            swap    D7                              ; Move the CPU type to the high word
+            clr.w   D7                              ; Clear the low word
+            move.b  #boxSE,D7                       ; Default to Macintosh SE
+            lea     .L1,A0                          ; Get our ROM location
             move.l  A0,D1
-            btst.l  #23,D1
-            beq.b   .L1
-            move.b  #4,D7
+            btst.l  #23,D1                          ; Is the ROM in 0x900000 or higher?
+            beq.b   .L1                             ; No, skip
+            move.b  #boxPortable,D7                 ; Set BoxFlag to 4 (Portable)
 .L1:
-            swap    D7
+            swap    D7                              ; Move BoxFlag into high word
             rts
             IF PortableAbs
             org     $90060C
             ENDIF
 SetUpTimeK:
             move    SR,-(SP)
+            move.l  Lev1AutoVector,-(SP)
+            movea.l #VIA_Base,A1
+            bclr.b  #$5,(VIA_ACR-VIA_Base,A1)
+            move.b  #$FF,(VIA_T2_H-VIA_Base,A1)
+            move.b  #$A0,(VIA_IER-VIA_Base,A1)
+            andi    #$F8FF,SR                       ; Enable interrupts
+            move.l  SP,D1
+.P1         lea     (VIAIntForTimeDBRA-.P1),A0
+            move.l  A0,Lev1AutoVector
+            moveq   #-1,D0
+            bra.b   .L3
+.L1:
+            move.b  #$F,(VIA_T2_L-VIA_Base,A1)
+            move.b  #$3,(VIA_T2_H-VIA_Base,A1)
+.L2:
+            dbf     D0,.L2
+            bra.b   VIAIntForTimeDBRA
+.L3:
+            bra.b   .L1
+VIAIntForTimeDBRA:
+            tst.b   (VIA_T2_L-VIA_Base,A1)
+            not.w   D0
+            move.w  D0,TimeDBRA
+            movea.l D1,SP
+            andi    #$F8FF,SR                       ; Enable interrupts
 
