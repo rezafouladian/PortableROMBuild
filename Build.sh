@@ -1,1 +1,1 @@
-vasmm68k_mot -Fbin -o rom.bin -nosym StartInit.s
+vasmm68k_mot -Fbin -o rom.bin -nosym StartInit.s -sc -showopt -DPortableAbs
