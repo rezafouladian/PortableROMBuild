@@ -61,12 +61,14 @@ DoubleTime      EQU         $2F0
 CaretTime       EQU         $2F4
 SPClikCaret     EQU         $209
 SPKbd           EQU         $206
-DiskVars_FlEvtMask  EQU     $25E
+FlEvtMask       EQU         $25E
 IAZNotify       EQU         $33C
 AlarmState      EQU         $21F
 Lev1AutoVector  EQU         $64
 TimeDBRA        EQU         $D00
 IllegalInstructionVector    EQU $10
+JFetch          EQU         $8F4
+VBLQueue        EQU         $160
 
 
 

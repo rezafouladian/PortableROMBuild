@@ -362,7 +362,7 @@ InitADBvars:
             move.l  #FBDBSize,D0                    ; Get local data area length
             _NewPtrSysClear                         ; Allocate space on heap and clear
             move.l  A0,ADBBase                      ; Save pointer to ADBBase
-.P1         lea     (ADBProc-.P1).l,A0                  ; Get the ADBProc
+.P1         lea     (ADBProc-.P1).l,A0              ; Get the ADBProc
             lea     (.P1,PC,A0),A0
             move.l  A0,JADBProc                     ; Install it into JADBProc vector
 .P2         lea     (FDBShiftInt_VIA2-.P2),A0
@@ -373,27 +373,27 @@ InitADBvars:
             org     $900440
             ENDIF
 InitHiMemGlobals:
-            move.w  #-$1,PWMValue
+            move.w  #-$1,PWMValue                   ; Set current PWM speed invalid
             movea.l A5,A0
             suba.w  #$2FF,A0
             move.l  A0,PWMBuf1
             move.l  A0,PWMBuf2
             subq.w  #1,A0
             move.l  A0,SoundBase
-            move.l  A0,BufPtr
+            move.l  A0,BufPtr                       ; Save pointer to top of usable RAM
             rts
             IF PortableAbs
             org     $900460
             ENDIF
 InitGlobalVars:
-            lea     BaseOfROM,A0
+            lea     BaseOfROM,A0                    ; Point to ROMBase
             move.l  A0,ROMBase
             moveq   #-1,D0
             move.l  D0,SMGlobals
             move.l  #Sound_Base,ASCBase
             move.b  #$7F,ROM85
             move.w  #$C500,HWCfgFlags
-            move.l  #$10001,OneOne
+            move.l  #$10001,OneOne                  ; Setup magic constants
             moveq   #-1,D0
             move.l  D0,MinusOne                     ; Setup MinusOne
             bsr.w   InitSCCGlobals
@@ -401,24 +401,24 @@ InitGlobalVars:
             bsr.w   InitVIAGlobals
             bsr.w   InitSCSIGlobals
             clr.l   DSAlertTab
-            move.w  MinusOne,FSFCBLen
-.P1         lea     (FSIODNETbl-.P1),A0
+            move.w  MinusOne,FSFCBLen               ; Mark that FS needs (re)initialization
+.P1         lea     (FSIODNETbl-.P1),A0             ; Point to the offset table
             lea     (.P1,PC,A0),A0
-            lea     $8F4,A1
-            moveq   #2,D1
+            lea     JFetch,A1                       ; Point to first jump table entry
+            moveq   #2,D1                           ; There are 3 vectors
             bsr.w   JmpTblInit
-            clr.b   DskVerify
-            clr.b   LoadTrap
-            clr.b   MmInOK
-            clr.w   SysEvtMask
-            clr.l   JKybdTask
-            clr.l   StkLowPt
-            lea     $160,A1
-            jsr     InitQueue
-            clr.l   Ticks
-            move.b  #-$80,MBState
-            clr.l   MBTicks
-            clr.l   SysFontFam
+            clr.b   DskVerify                       ; No disk verify
+            clr.b   LoadTrap                        ; No trap before launch
+            clr.b   MmInOK                          ; Inital memory manager checks
+            clr.w   SysEvtMask                      ; Don't allow any events to be posted
+            clr.l   JKybdTask                       ; No keyboard task yet
+            clr.l   StkLowPt                        ; Set stack low at this time (turn off check during VBL)
+            lea     VBLQueue,A1
+            jsr     InitQueue                       ; Initialize VBL queue header
+            clr.l   Ticks                           ; Clear system tick count
+            move.b  #$80,MBState                    ; Set current mouse button state to up
+            clr.l   MBTicks                         ; Clear timestamp for mouse button
+            clr.l   SysFontFam                      ; Clear SysFontFam and SysFontSize
             clr.l   WidthTabHandle
             clr.w   TESysJust
             clr.b   WordRedraw
@@ -428,8 +428,8 @@ InitGlobalVars:
 .P2         lea     (NMGNEFilter-.P2),A0
             lea     (.P2,PC,A0),A0
             move.l  A0,GNEFilter
-            clr.l   IAZNotify
-            move.w  #-$81,DiskVars_FlEvtMask
+            clr.l   IAZNotify                       ; No InitApplZone notify proc
+            move.w  #$FF7F,FlEvtMask                ; Init for disable of DIP flushes
             rts
             IF PortableAbs
             org     $900524
@@ -453,14 +453,16 @@ WDCBSWOS:
             dc.w    $28
 PMPSWOS:
             dc.w    $2E
+SwitchLen   EQU     *-SwitchGoodies
+            ;$38
 InitSwitcherTable:
-            moveq   #$38,D0
-            _NewPtrSysClear
-            movea.l A0,A1
-            lea     SwitchGoodies,A0
-            moveq   #$38,D0
-            _BlockMove
-            move.l  A1,SwitcherTPtr
+            moveq   #SwitchLen,D0                   ; Allocate a switcher table
+            _NewPtrSysClear                         ; in the system heap
+            movea.l A0,A1                           ; Make it the destination
+            lea     SwitchGoodies,A0                ; Load table
+            moveq   #SwitchLen,D0                   ; Copy it - needs to be updated
+            _BlockMove                              ; with WDCBSwitch, PMSPSwitch later
+            move.l  A1,SwitcherTPtr                 ; Set the pointer up for Switcher
             rts
 GetPRAM:
             _InitUtil
