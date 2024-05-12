@@ -80,14 +80,22 @@ VIA_IER         EQU         $F71C00
 VIA_ACR         EQU         $F71600
 VIA_T2_H        EQU         $F71200
 VIA_T2_L        EQU         $F71000
+VIA_DDR_A       EQU         $F70600
 VIA_DDR_B       EQU         $F70400
+VIA_ORA         EQU         $F71E00
 
 SCCWBase        EQU         $FD8000
 
 DBase           EQU         $F6E1FF
+q6L             EQU         DBase+$1800
+q6H             EQU         DBase+$1A00
+q7L             EQU         DBase+$1C00
+q7H             EQU         DBase+$1E00
 
-SCSIread        EQU         $F90000
-SCSIwrite       EQU         $F90001
+
+SCSI_Base       EQU         $F90000
+SCSIrd          EQU         $F90000
+SCSIw           EQU         $F90001
 sICRread        EQU         $F90010
 sICRwrite       EQU         $F90011
 
@@ -97,3 +105,4 @@ DiagROM1        EQU         $F80080
 Video_Base      EQU         $FA8000
 
 Sound_Base      EQU         $FB0000
+ascFifoInt      EQU         $FB0804

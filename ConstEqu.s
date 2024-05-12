@@ -10,15 +10,16 @@ TROMCode        EQU         $55AAAA55
 powerCntl       EQU         $10
 pMgrADBoff      EQU         $21                     ; Turn ADB auto-poll off
 timeRead        EQU         $38                     ; Read the time from the clock chip
-readINT         EQU         $78
-PmgrSelfTest    EQU         $EC
+xPramRead       EQU         $3A                     ; Read extended PRAM
+readINT         EQU         $78                     ; Get Power Manager interrupt data
+PmgrSelfTest    EQU         $EC                     ; Run Power Manager self test
 
-pIWM            EQU         0
-pSCC            EQU         1
-pHD             EQU         2
-pModem          EQU         3
+pIWM            EQU         0                       ; IWM power
+pSCC            EQU         1                       ; SCC power
+pHD             EQU         2                       ; SCSI hard drive power
+pModem          EQU         3                       ; Modem power
 pSerDrvr        EQU         4
-pASC            EQU         5
+pASC            EQU         5                       ; Sound power
 pMinus5V        EQU         6
 pTurnOn         EQU         7
 
@@ -75,6 +76,7 @@ cpu68020        EQU         2
 cpu68030        EQU         3
 
 PMreq           EQU         0                       ; Power manager handshake request
+PMack           EQU         1
 TestJumper      EQU         2                       ; Test jumper
 SyncM           EQU         3                       ; Synchronous modem support
                                                     ; 0 = original Macintosh configuration
@@ -84,7 +86,9 @@ ErrROM          EQU         $0001
 ErrVIA1         EQU         $0006
 ErrSCSI         EQU         $000B
 ErrIWM          EQU         $000C
+ErrData         EQU         $000E
 ErrPmgrSt       EQU         $0010
+ErrSizeMem      EQU         $0011
 ErrPmgrTurnOn   EQU         $0014
 ErrVidRAM       EQU         $0082
 ErrVidAddr      EQU         $0083
