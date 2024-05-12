@@ -807,4 +807,65 @@ PowerManagerInit:
             clr.b   (ascFifoInt-Sound_Base,A3)
 
 
+            IF PortableAbs
+            org     $901B28
+            ENDIF
+; QuasiPwrMgr
+; 
+; Inputs:   D0.w    Command byte and number of bytes
+;           D1.l    Up to 4 bytes to transfer or receive
+; Outputs:  A0      0 if successful, error code otherwise
+QuasiPwrMgr:
+            movea.l A6,A5
+            move    SR,D5
+            swap    D5
+            lea     VIA_Base,A1
+            move.b  #$10,(VIA_IER-VIA_Base,A1)
+            tst.w   Clock16M
+            move.b  #$FF,(VIA_DDR_A-VIA_Base,A1)
+            move.b  (VIA_ORA-VIA_Base,A1),D2
+            swap    D2
+            move.w  #1,D2
+.L1:
+            clr.b   (VIA_DDR_A-VIA_Base,A1)
+            swap    D5
+            move    D5,SR
+            swap    D5
+            move.w  #1080,D5
+.L2:
+            btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
+            beq.b   .L3
+            cmpi.b  #$FF,(VIA_ORA-VIA_Base,A1)
+            beq.b   .L4
+.L3:
+            dbf     D5,.L2                          ; Loop until timeout
+            movea.w #$CD38,A0
+            bra.w   .L20
+.L4:
+            ori.w   #$300,SR
+            rol.w   #8,D0
+            move.b  D0,D5
+            lea     .L5,A6
+            jmp     .L21
+.L5:
+            beq.b   .L6
+            ror.w   #8,D0
+            dbf     D2,.L1
+            bra.w   .L20
+.L6:
+            clr.w   D2
+            rol.w   #8,D0
+            move.b  D0,D2
+            move.b  D0,D5
+            lea     .L7,A6
+            jmp     .L21
+.L7:
+            bne.b   .L20
+            subq.w  #1,D2
+            bmi.b   .L10
+.L8:
+            rol.l   #8,D1
+            move.b  D1,D5
+            lea     .L9,A6
+            jmp     .L21
 
