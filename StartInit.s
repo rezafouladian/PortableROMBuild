@@ -766,5 +766,45 @@ PowerManagerInit:
             clr.l   WarmStart
 .L8:
             move.w  #ErrSCSI,D7
+            lea     SCSI_Base,A2
+            move.b  (sICRread-SCSI_Base,A2),D0
+            move.w  #ErrIWM,D7
+            lea     DBase,A2
+            tst.b   (q7L-DBase,A2)
+            move.b  (q6H-DBase,A2),D0
+            move.w  #ErrData,D7
+            suba.l  A0,A0
+            lea     .L9,A6
+            jmp     DataBusTest
+.L9:
+            tst.l   D6
+            bne.w   Error1Handler
+            move.w  #ErrSizeMem,D7
+            lea     .L10,A6
+            move.l  #$22BBF0E1,D0
+            jmp     SizeMemory
+.L10:
+            move.w  #xPramRead*$100+2,D0
+            move.l  #$46010000,D1
+            lea     .L11,A6
+            jmp     QuasiPwrMgr
+.L11:
+            cmpa.w  #0,A0
+            bne.w   Error1Handler
+            movea.l D6,A0
+            move    A0,USP
+            lsr.l   #8,D1
+            suba.l  D1,A0
+            cmpa.l  #$80000,A0
+            blt.b   .L12
+            move.l  A0,D6
+.L12:
+            movea.l D6,SP
+            moveq   #0,D6
+            lea     Sound_Base,A3
+            moveq   #$28,D0
+            bsr.w   BootBeep
+            clr.b   (ascFifoInt-Sound_Base,A3)
+
 
 
