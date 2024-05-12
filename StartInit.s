@@ -983,4 +983,46 @@ STPWRMGR:
 .L1:
             movem.l (SP)+,D2-D5/A0-A6
             rts
+DataBusTest:
+            moveq   #1,D0
+            moveq   #-2,D1
+            move.w  #255,D2
+.Loop:
+            movem.l D0/D1,(A0)
+            eor.l   D0,(A0)
+            or.l    (A0),D6
+            eor.l   D1,($4,A0)
+            or.l    ($4,A0),D6
+            rol.l   #1,D0
+            rol.l   #1,D1
+            dbf     D2,.Loop
+            move.l  D6,D0
+            swap    D0
+            or.w    D0,D6
+            andi.l   #$FFFF,D6
+            jmp     (A6)
+StartUpROMTest:
+            moveq   #0,D0
+            moveq   #0,D1
+            lea     BaseOfROM,A0
+            move.l  (A0)+,D4                        ; Load expected checksum
+            move.l  #ROMSize/2-4,D3
+.Loop:
+            move.w  (A0)+,D0                        ; Fetch a ROM word
+            add.l   D0,D1                           ; Add to checksum
+            subq.l  #1,D3                           ; Decrement by 1 (2 bytes)
+            bne.b   .Loop                           ; Loop until done
+            nop                                     ; Some nops for debug
+            nop                                     ; (leave these here for emulator use)
+            eor.l   D4,D1                           ; Result should be zero
+            beq.b   .End
+            move.w  #$FFFF,D6                       ; Set failed code in minor error register
+.End:
+            jmp     (A6)
+Mod3Test:
+            
+
+
+
+
 

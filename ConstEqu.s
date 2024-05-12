@@ -1,3 +1,5 @@
+ROMSize         EQU         $40000
+
 RAMconfigInit   EQU         $6
 
 sleepConst      EQU         'SARA'
