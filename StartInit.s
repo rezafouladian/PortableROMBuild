@@ -669,6 +669,16 @@ ZerError:
 ChkError:
             ori.w   #CICode,D7
             bra.w   ExceptionHandler
+TrapV:
+            ori.w   #TPCode,D7
+            bra.w   ExceptionHandler
+PrivError:
+            ori.w   #PVCode,D7
+            bra.w   ExceptionHandler
+Trace:
+            ori.w   #TECode,D7
+            bra.w   ExceptionHandler
+
 
 ExceptionHandler:
             bset.l  #excp,D7                        ; Set exception flag
@@ -684,7 +694,7 @@ StartTest1:
             moveq   #0,D6                           ; Clear minor error register
             lea     TMVectors,A0                    ; Get address of vectors
             suba.l  A1,A1                           ; Clear A1
-            move.w  #63,D0                          ; Number of vectors
+            move.w  #64-1,D0                        ; Number of vectors
 .VectorLoop:
             move.l  (A0)+,(A1)+
             dbf     D0,.VectorLoop
@@ -805,6 +815,361 @@ PowerManagerInit:
             moveq   #$28,D0
             bsr.w   BootBeep
             clr.b   (ascFifoInt-Sound_Base,A3)
+            moveq   #0,D6
+            lea     .L13,A6
+            move.w  #ErrSCCReg,D7
+            jmp     SccRegTest
+.L13:
+            lea     .L14,A6
+            tst.l   D6
+            bne.w   NCErrorHandler
+.L14:
+            lea     .L15,A6
+            move.w  #ErrSCCTimer,D7
+            jmp     SccTimerTest
+.L15:
+            lea     .L16,A6
+            tst.l   D6
+            bne.w   NCErrorHandler
+.L16:
+            lea     .L17,A6
+            move.w  #ErrSCCLoop,D7
+            jmp     SccLoopTest
+.L17:
+            lea     .L18,A6
+            tst.l   D6
+            bne.w   NCErrorHandler
+.L18:
+            lea     .L19,A6
+            move.w  #ErrVIATest,D7
+            jmp     ViaTest
+.L19:
+            lea     .L20,A6
+            tst.l   D6
+            bne.w   NCErrorHandler
+.L20:
+            lea     .L21,A6
+            move.w  #ErrASCTest,D7
+            jmp     TestASC
+.L21:
+            lea     .L22,A6
+            tst.l   D6
+            bne.w   NCErrorHandler
+.L22:
+            lea     .L23,A6
+            move.w  #ErrPramTest,D7
+            jmp     PRAMTest
+.L23:
+            lea     .L24,A6
+            tst.l   D6
+            bne.w   NCErrorHandler
+.L24:
+            move.w  #ErrRAMC,D7
+            movea.l SP,A0
+            subq.w  #8,A0
+            lea     .L25,A6
+            jmp     DataBusTest
+.L25:
+            tst.l   D6
+            bne.w   .L27
+            move.w  #ErrAddr,D7
+            movea.l SP,A0
+            lea     .L26,A6
+            jmp     AddrLineTest
+.L26:
+            tst.l   D6
+            bne.b   .L27
+            clr.w   D7
+.L27:
+            lea     TMVectors,A0
+            suba.l  A1,A1
+            move.w  #64-1,D0
+.L28:
+            move.l  (A0)+,(A1)+
+            dbf     D0,.L28
+            tst.l   D6
+            bne.w   Error1Handler
+            btst.l  #test,D7
+            bne.w   PostProc
+            move.w  #xPramRead*$100+2,D0
+            move.l  #$46010000,D1
+            lea     .L29,A6
+            jmp     QuasiPwrMgr
+.L29:
+            move.w  A0,D6
+            tst.l   D6
+            bne.w   Error1Handler
+            move    USP,A6
+            movea.l A6,A5
+            move.l  A6,D0
+            lsr.l   #8,D1
+            sub.l   D1,D0
+            cmpi.l  #$80000,D0
+            blt.b   .L30
+            movea.l D0,A5
+.L30:
+            move.l  A5,D0
+            lsr.l   #1,D0
+            bclr.l  #0,D0                           ; Align stack pointer
+            movea.l D0,SP
+            jmp     StartInit1
+TJump:
+            dc.w    SizeMemory-TJump
+            dc.w    DataBusTest-TJump
+            dc.w    Mod3Test-TJump
+            dc.w    AddrLineTest-TJump
+            dc.w    RomTest-TJump
+            dc.w    RevMod3Test-TJump
+            dc.w    ExtRAMTest-TJump
+            dc.w    NoTest-TJump
+MaxTest:
+            dc.w    8
+NJump:
+            dc.w    MapRamDataTest-NJump
+            dc.w    MapRamUniqTest-NJump
+            dc.w    VramDataTest-NJump
+            dc.w    VramAddrTest-NJump
+            dc.w    SccRegTest-NJump
+            dc.w    SccLoopTest-NJump
+            dc.w    SccTimerTest-NJump
+            dc.w    ViaTest-NJump
+            dc.w    TestSCSI-NJump
+            dc.w    TestASC-NJump
+            dc.w    PRAMTest-NJump
+MaxNTst:
+            dc.w    11
+PostProc:
+            tst.w   D7
+            bne.b   .L1
+            move.l  #$87654321,D6                   ; No, set good result code
+.L1:
+            bra.w   Error1Handler
+RamTest:
+            movem.l A6-A0/D7-D0,-(SP)
+            move    SR,-(SP)
+            moveq   #0,D6
+            moveq   #0,D7
+            move.w  #ErrRAMA,D7
+            ori     #$300,SR
+            lea     .RamTestRtn,A6
+            jmp     Mod3Test
+.RamTestRtn:
+            tst.l   D6
+            bne.w   Error3Handler
+            move    (SP)+,SR
+            movem.l (SP)+,D0-D7/A0-A6
+            rts
+Error1Handler:
+            lea     VIA_Base,A1
+            bset.b  #PMreq,(VIA_BufB-VIA_Base,A1)
+            move.b  #%10111001,(VIA_DDR_B-VIA_Base,A1)
+            bclr.b  #SyncM,(VIA_BufB-VIA_Base,A1)
+            lea     .L1,A6
+            move.w  #powerCntl*100+1,D0
+            move.l  #(1<<pTurnOn|1<<pMinus5V|1<<pASC|1<<pSerDrvr|1<<pHD|1<<pSCC|1<<pIWM)*1000000,D1
+            jmp     QuasiPwrMgr
+.L1:
+            btst.l  #test,D7
+            bne.b   .L3
+            movea.l D7,A0
+            move    A0,USP
+            lea     Sound_Base,A3
+            lea     .L2,A6
+            jmp     ErrorBeep1
+.L2:
+            move    USP,A0
+            move.l  A0,D7
+            jmp     CritErr
+.L3:
+            bset.l  #nosleep,D7
+            bset.l  #MsgQ,D7
+            bset.l  #timer,D7
+            move.w  #sec,D4
+            swap    D4
+            lea     .L4,A6
+            jmp     StartTimer
+.L4:
+            bra.w   TMEntry1
+Error3Handler:
+            movea.l D7,A0
+            move    A0,USP
+            lea     Sound_Base,A3
+            lea     .L1,A6
+            jmp     ErrorBeep2
+.L1:
+            move    USP,A0
+            move.l  A0,D7
+            jmp     CritErr
+Error4Handler:
+            movea.l D7,A0
+            move    A0,USP
+            lea     Sound_Base,A3
+            lea     .L1,A6
+            jmp     ErrorBeep3
+.L1:
+            move    USP,A0
+            move.l  A0,D7
+            jmp     CritErr
+NCErrorHandler:
+            cmpi.l  #-1,D6
+            bne.b   .L1
+            moveq   #0,D6
+            jmp     (A6)
+.L1:
+            movea.l A6,A4
+            moveq   #$70,D1
+            lea     .L2,A6
+            jmp     WrXByte
+.L2:
+            moveq   #$78,D3
+.L3:
+            rol.l   #8,D6
+            move.b  D6,D2
+            move.b  D3,D1
+            lea     .L4,A6
+            jmp     WrXByte
+.L4:
+            addq.w  #1,D3
+            cmpi.w  #$7C,D3
+            blt.b   .L3
+.L5:
+            rol.l   #8,D7
+            move.b  D7,D2
+            move.b  D3,D1
+            lea     .L6,A6
+            jmp     WrXByte
+.L6:
+            addq.w  #1,D3
+            cmpi.w  #$80,D3
+            blt.b   .L5
+            moveq   #0,D6
+            jmp     (A4)
+TestManager:
+            movem.l A6-A0/D5-D0,-(SP)
+            move    SR,-(SP)
+            ori     #$300,SR
+            tst.w   D0
+            beq.b   .cmd0
+            subq.w  #1,D0
+            beq.w   .Exit
+            subq.w  #1,D0
+            beq.w   .cmd2
+            subq.w  #1,D0
+            beq.w   TMEntry0
+            subq.w  #1,D0
+            beq.w   .cmd4
+            subq.w  #1,D0
+            beq.w   .cmd5
+            subq.w  #1,D0
+            beq.w   .cmd6
+            subq.w  #1,D0
+            beq.w   .cmd7
+            subq.w  #1,D0
+            beq.w   .cmd8
+            subq.w  #1,D0
+            bra.w   .Exit
+.cmd0:
+            moveq   #0,D6
+            move.l  (A0),D7
+            movea.l (8,A0),A1
+            movea.l (4,A0),A0
+.cmd4:
+            move.w  D7,D1
+            lsr.w   #8,D1
+            cmp.w   MaxTest,D1
+            bge.w   .Exit
+            asl.w   #1,D1
+            lea     TJump,A5
+            move.w  (A5,D1),D1
+            lea     (A5,D1),A5
+.Loop:
+            lea     .L1,A6
+            jmp     (A5)
+.L1:
+            tst.l   D6
+            beq.b   .noErr
+            btst.l  #loop,D7
+            beq.b   .TestStop
+.TestLoop:
+            lea     .TestLoop,A6
+            jmp     (A5)
+.TestStop:
+            btst.l  #stop,D7
+            bne.b   .StopTest
+.noErr:
+            subq.b  #1,D7
+            bne.b   .Loop
+.StopTest:
+            btst.l  #pram,D7
+            beq.b   .noStore
+            lea     .noStore,A6
+            jmp     StoreResults
+.noStore:
+            btst.l  #boot,D7
+            beq.w   .Exit
+            lea     .StBoot,A0
+            jmp     (A0)
+.cmd5:
+            moveq   #0,D6
+            move.l  (A0),D7
+            movea.l (8,A0),A1
+            movea.l (4,A0),A0
+.cmd6:
+            btst.l  #$8,D7
+            beq.b   .L3
+            moveq   #0,D1
+            lea     .L2,A6
+            bra.w   .L17
+.L2:
+            tst.l   D6
+            bne.w   .L18
+.L3:
+            btst.l  #$9,D7
+            beq.b   .L5
+            moveq   #1,D1
+            lea     .L4,A6
+            bra.b   .L17
+.L4:
+            tst.l   D6
+            bne.w   .L18
+.L5:
+            btst.l  #$A,D7
+            beq.b   .L7
+            moveq   #2,D1
+            lea     .L6,A6
+            bra.b   .L17
+.L6:
+            tst.l   D6
+            bne.b   .L18
+.L7:
+            btst.l  #$B,D7
+            beq.b   .L9
+            moveq   #3,D1
+            lea     .L8,A6
+            bra.b   .L17
+.L8:
+            tst.l   D6
+            bne.b   .L18
+.L9:
+            btst.l  #$C,D7
+            beq.b   .L11
+            moveq   #4,D1
+            lea     .L10,A6
+            bra.b   .L17
+.L10:
+            tst.l   D6
+            bne.b   .L18
+.L11:
+            btst.l  #$D,D7
+            beq.b   .L13
+            moveq   #5,D1
+            lea     .L12,A6
+            bra.b   .L17
+
+
+
+
+
 
 
             IF PortableAbs
@@ -1020,7 +1385,7 @@ StartUpROMTest:
 .End:
             jmp     (A6)
 Mod3Test:
-            
+
 
 
 

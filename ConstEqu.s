@@ -85,7 +85,10 @@ SyncM           EQU         3                       ; Synchronous modem support
                                                     ; 1 = synchronous modem support, SCC channel A
 
 ErrROM          EQU         $0001
+ErrRAMA         EQU         $0003
+ErrAddr         EQU         $0005
 ErrVIA1         EQU         $0006
+ErrRAMC         EQU         $0008
 ErrSCSI         EQU         $000B
 ErrIWM          EQU         $000C
 ErrData         EQU         $000E
@@ -94,6 +97,12 @@ ErrSizeMem      EQU         $0011
 ErrPmgrTurnOn   EQU         $0014
 ErrVidRAM       EQU         $0082
 ErrVidAddr      EQU         $0083
+ErrSCCReg       EQU         $0084
+ErrSCCLoop      EQU         $0085
+ErrSCCTimer     EQU         $0086
+ErrVIATest      EQU         $0087
+ErrASCTest      EQU         $0089
+ErrPramTest     EQU         $008A
 
 BECode          EQU         $0100                   ; Bus error exception code
 ADCode          EQU         $0200                   ; Address error exception code
@@ -103,8 +112,17 @@ CICode          EQU         $0500
 TPCode          EQU         $0600
 PVCode          EQU         $0700
 
+sec             EQU         $C
+
+MsgQ            EQU         16
+nosleep         EQU         18
+timer           EQU         22
 excp            EQU         24
 test            EQU         26
 beok            EQU         27
+stop            EQU         28
+loop            EQU         29
+pram            EQU         30
+boot            EQU         31
 
 oneSecIntFlag   EQU         27

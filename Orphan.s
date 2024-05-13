@@ -37,10 +37,7 @@ InitIWM:
 InitSCSI:
             lea     SCSIwrite,A0
             clr.b   ($10,A0)
-
-            org     $900E96
-RamTest:
-            movem.l A6-A0/D7-D0,-(SP)
+            
 
 
 
@@ -155,4 +152,5 @@ InitIWMGlobals:
 
             org     $9007D4
 InitSCCGlobals:
-    
+
+            
