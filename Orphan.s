@@ -245,3 +245,6 @@ VramAddrTest:
             org     $9020E2
 VramDataTest:
 
+            org     $901AD8
+RdXByte:
+            
