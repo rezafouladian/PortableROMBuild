@@ -10,12 +10,25 @@ PortableAbs EQU     0
             IF PortableAbs
             opt     o10-                            ; Prevent optimization from add/sub to lea
             opt     o4-                             ; Prevent optimization from move.l to moveq
+            opt     ol-
             ENDIF
+
+            ; Add PC to JMP when matching original ROM
             macro   jpp
+            IF PortableAbs
                 jmp (\1,PC)
+            ELSE
+                jmp \1
+            ENDIF
             endm
+
+            ; Add PC to JSR when matching original ROM
             macro   jsp
+            IF PortableAbs
                 jsr (\1,PC)
+            ELSE
+                jsr \1
+            ENDIF
             endm
 
             org     BaseOfROM
@@ -132,9 +145,9 @@ BootRetry:
             move    #$2000,SR
             bsr.w   InitVidGlobals
             bsr.w   CompBootStack
-            movea.l A0,SP
-            suba.w  #$2000,A0
-            _SetApplLimit
+            movea.l A0,SP                           ; Set the stack pointer there
+            suba.w  #BootStackSize,A0               ; Give ourselves some stack space
+            _SetApplLimit                           ; Don't let the system heap crash our stack
             lea     ($308).w,A1
             jsp     InitQueue
 .P3         lea     (InitSCSIMgr-.P3).l,A0
@@ -175,6 +188,15 @@ BootRetry:
             bsr.w   DrawBeepScreen
             move.l  #wmStConst,WarmStart
             bra.w   BootMe
+; JmpTblInit
+;
+; Sets up RAM based jump tables from ROM routine offset tables
+;
+; Inputs:   A0  Pointer to table of routine word offsets (A0-relative)
+;           A1  Pointer to destination jump table in RAM
+;           D1  Number of vectors to install - 1
+; Outputs:  A0  Pointer to next entry in offset table
+;           A1  Pointer to next jump table entry in RAM
 JmpTblInit:
             move.l  A0,D0
 .JmpTbl2:
@@ -184,9 +206,14 @@ JmpTblInit:
             move.l  D2,(A1)+
             dbf     D1,.JmpTbl2
             rts
-            IF PortableAbs
-            org     $900234
-            ENDIF
+; FillWithOnes
+;
+; Fills a longword aligned memory range with all 1's
+; 
+; Inputs:   A0  Pointer to starting RAM location
+;           A1  Pointer to ending RAM location
+; Outputs:  A0
+;           A1
 FillWithOnes:
             move.l  A1,D0
             sub.l   A0,D0
@@ -197,18 +224,12 @@ FillWithOnes:
             subq.l  #1,D0
             bne.b   .FillLoop
             rts
-            IF PortableAbs
-            org     $900244
-            ENDIF
 CompBootStack:
             move.l  BufPtr,D0                       ; Get top of usable memory
             lsr.l   #1,D0                           ; Divide by two
             movea.l D0,A0
             suba.w  #$400,A0
             rts
-            IF PortableAbs
-            org     $900252
-            ENDIF
 SetUpSysAppZone:
             lea     SysHeap,A0
             _InitZone
@@ -223,17 +244,14 @@ SetUpSysAppZone:
             bls     .L3
             movea.l SP,A0
 .L3:
-            suba.w  #$2000,A0
+            suba.w  #BootStackSize,A0
             _SetApplLimit
             rts
 SysHeap:
-            dc.l    HeapStart
-            dc.l    HeapStart+SysZoneSize
-            dc.w    4*dfltMasters
-            dc.l    0
-            IF PortableAbs
-            org     $900290
-            ENDIF
+            dc.l    HeapStart                       ; Start address
+            dc.l    HeapStart+SysZoneSize           ; Size
+            dc.w    2*dfltMasters                   ; Number of master pointers
+            dc.l    0                               ; No growzone proc
 DrawBeepScreen:
             pea     (-$4,A5)
             _InitGraf
@@ -259,7 +277,7 @@ DrawBeepScreen:
 .L2:
             cmpi.b  #2,NTSC
             bne.b   .L4
-            movea.l Video_Base,A0
+            movea.l #Video_Base,A0
             move.w  #hcVideoSize,D1
             subq.w  #1,D1
 .L3:
@@ -451,11 +469,12 @@ SwitchGoodies:
             dc.l    $0
             dc.l    $4
             dc.l    $0
+SwitchLen   EQU     *-SwitchGoodies
 WDCBSWOS:
             dc.w    $28
 PMPSWOS:
             dc.w    $2E
-SwitchLen   EQU     *-SwitchGoodies
+
             ;$38
 InitSwitcherTable:
             moveq   #SwitchLen,D0                   ; Allocate a switcher table
@@ -1067,7 +1086,7 @@ NCErrorHandler:
 .L1:
             movea.l A6,A4
             moveq   #$70,D1
-            lea     .L2,A6
+            lea     .L1_1,A6
             jpp     RdXByte
 .L1_1:
             bset.l  #0,D1
@@ -1321,7 +1340,7 @@ TestManager:
             bra.b   .L29
 .L30:
             btst.l  #$1C,D7
-            bne.b   .L23
+            bne.b   .L32
 .L31:
             subq.b  #1,D7
             bne.b   .L24
@@ -1354,7 +1373,7 @@ F34:
             tst.l   D6
             bne.b   .L4
 .L3:
-            cmpa.l  (-$A,A5),A1
+            cmpa.l  (-$A,A4),A1
             ble.b   .L1
             bra.b   .L6
 .L4:
@@ -1444,7 +1463,7 @@ TMcmd8:
             rts
 TMEntry0:
             moveq   #0,D6
-            moveq   #0,D5
+            moveq   #0,D7
 TMEntry1:
             move.w  #powerCntl*$100+1,D0
             move.l  #(1<<pTurnOn|1<<pMinus5V|1<<pASC|1<<pSerDrvr|1<<pHD|1<<pSCC|1<<pIWM)*$1000000,D1
@@ -2053,8 +2072,23 @@ GetChar:
             lsl.l   #8,D0
             or.w    D0,D5
             lea     SCCRBase,A2
-
+            move.b  (SCCR_aData-SCCRBase,A2),D5
+            btst.l  #star,D7
+            beq.b   .Exit
+            move.b  D5,D0
+            swap    D5
+            move.b  D0,D5
+            swap    D5
 .Exit:
+            jmp     (A6)
+; CvtAscii
+;
+; Convert from hex ASCII to hex.
+;
+; Inputs:   D0.b    ASCII character
+; Outputs:  D0.b    Converted nibble
+CvtAscii:
+            andi.w  #$7F,D0
 
 
 

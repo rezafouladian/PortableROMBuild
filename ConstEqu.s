@@ -138,3 +138,5 @@ boot            EQU         31
 oneSecIntFlag   EQU         27
 
 RxCA            EQU         0                       ; SCC Receive Character Available
+
+BootStackSize   EQU         8*1024
