@@ -678,6 +678,53 @@ PrivError:
 Trace:
             ori.w   #TECode,D7
             bra.w   ExceptionHandler
+LineA:
+
+LineF:
+
+Unassigned:
+
+CPProtocol:
+
+FormatX:
+
+SpurInterrupt:
+
+TrapInst:
+
+IntLevel1:
+
+IntLevel2:
+
+IntLevel3:
+
+IntLevel4:
+
+IntLevel5:
+
+IntLevel6:
+
+IntLevel7:
+
+FPCP1:
+
+FPCP2:
+
+FPCP3:
+
+FPCP4:
+
+FPCP5:
+
+FPCP6:
+
+FPCP7:
+
+PMMUConfig:
+
+PMMUIllegal:
+
+PMMUAccess:
 
 
 ExceptionHandler:
@@ -1065,14 +1112,14 @@ TestManager:
             subq.w  #1,D0
             beq.w   .cmd7
             subq.w  #1,D0
-            beq.w   .cmd8
+            beq.w   TMcmd8
             subq.w  #1,D0
             bra.w   .Exit
 .cmd0:
             moveq   #0,D6
             move.l  (A0),D7
-            movea.l (8,A0),A1
-            movea.l (4,A0),A0
+            movea.l ($8,A0),A1
+            movea.l ($4,A0),A0
 .cmd4:
             move.w  D7,D1
             lsr.w   #8,D1
@@ -1107,7 +1154,7 @@ TestManager:
 .noStore:
             btst.l  #boot,D7
             beq.w   .Exit
-            lea     .StBoot,A0
+            lea     StBoot,A0
             jmp     (A0)
 .cmd5:
             moveq   #0,D6
@@ -1165,7 +1212,835 @@ TestManager:
             moveq   #5,D1
             lea     .L12,A6
             bra.b   .L17
+.L12:
+            tst.l   D6
+            bne.b   .L18
+.L13:
+            btst.l  #$E,D7
+            beq.b   .L15
+            moveq   #6,D1
+            lea     .L14,A6
+            bra.b   .L17
+.L14:
+            tst.l   D6
+            bne.b   .L18
+.L15:
+            btst.l  #$F,D7
+            beq.b   .L21
+            moveq   #$7,D1
+            lea     .L16,A6
+            bra.b   .L17
+.L16:
+            tst.l   D6
+            bne.b   .L18
+            bra.b   .L21
+.L17:
+            asl.w   #$1,D1
+            lea     TJump,A5
+            move.w  (A5,D1),D1
+            lea     (A5,D1),A5
+            jmp     (A5)
+.L18:
+            btst.l  #$1D,D7
+            beq.b   .L20
+.L19:
+            lea     .L19,A6
+            jmp     (A5)
+.L20:
+            btst.l  #stop,D7
+            bne.w   .StopTest
+.L21:
+            subq.b  #1,D7
+            bne.w   .cmd6
+            bclr.l  #$F,D7
+            bne.w   .cmd6
+            bra.w   .StopTest
+.Exit:
+            move    (SP)+,SR
+.Exit2:
+            movem.l (SP)+,D0-D5/A0-A6
+            rts
+.cmd2:
+            move.w  (SP)+,D0
+            bra.b   .Exit2
+.cmd7:
+            lea     Sound_Base,SP
+            link.w  A4,#-$28
+            lea     (-$28,A4),A1
+            lea     Sound_Base,A2
+            moveq   #0,D1
+.L22:
+            move.b  D1,(A1)+
+            cmpa.l  A1,A2
+            bhi.b   .L22
+            lea     (-$12,A4),A1
+            moveq   #$11,D1
+.L23:
+            move.b  (A0)+,(A1)+
+            dbf     D1,.L23
+            moveq   #0,D6
+            move.l  (-$12,A4),D7
+.L24:
+            btst.l  #$A,D7
+            beq.b   .L25
+            move.w  #2,(-$26,A4)
+            bsr.b   F34
+            bne.b   .L28
+.L25:
+            btst.l  #$D,D7
+            beq.b   .L26
+            move.w  #5,(-$26,A4)
+            bsr.b   F34
+            bne.b   .L28
+.L26:
+            btst.l  #$E,D7
+            beq.b   .L27
+            move.w  #6,(-$26,A4)
+            bsr.b   F34
+            bne.b   .L28
+.L27:
+            bra.w   .L13
+.L28:
+            btst.l  #$1D,D7
+            beq.b   .L30
+.L29:
+            bsr.b   F34
+            bra.b   .L29
+.L30:
+            btst.l  #$1C,D7
+            bne.b   .L23
+.L31:
+            subq.b  #1,D7
+            bne.b   .L24
+            bclr.l  #$F,D7
+            bne.b   .L24
+.L32:
+            btst.l  #$1E,D7
+            beq.b   .L33
+            bsr.w   F35
+.L33:
+            lea     StBoot,A0
+            jmp     (A0)
+F34:
+            moveq   #0,D6
+            clr.b   (-$13,A4)
+            move.w  (-$26,A4),D1
+            suba.l  A0,A0
+            movea.l #$10000,A1
+            asl.w   #1,D1
+            lea     TJump,A5
+            move.w  (A5,D1),D1
+            lea     (A5,D1),A5
+            lea     .L2,A6
+.L1:
+            jmp     (A5)
+.L2:
+            adda.l  #$10000,A0
+            adda.l  #$10000,A1
+            addq.b  #1,(-$13,A4)
+            tst.l   D6
+            bne.b   .L4
+.L3:
+            cmpa.l  (-$A,A5),A1
+            ble.b   .L1
+            bra.b   .L6
+.L4:
+            move.l  D6,D2
+            moveq   #0,D6
+            addq.w  #1,(-$24,A4)
+            move.b  (-$13,A4),D0
+            subq.b  #1,D0
+            move.w  (-$16,A4),D1
+            cmpi.w  #9,D1
+            bhi.b   .L5
+            lea     (-$22,A4),A2
+            move.b  D0,(A2,D1)
+            addq.w  #1,D1
+            ror.w   #8,D2
+            move.b  D2,(A2,D1)
+            addq.w  #1,D1
+            ror.w   #8,D2
+            move.b  D2,(A2,D1)
+            addq.w  #1,D1
+            move.w  D1,(-$16,A4)
+.L5:
+            bra.b   .L3
+.L6:
+            move.w  (-$24,A4),D6
+            rts
+F35:
+            moveq   #100,D2
+            moveq   #112,D1
+            move.l  A4,-(SP)
+            lea     .L1,A6
+            jmp     WrXByte
+.L1:
+            movea.l (SP)+,A4
+            lea     (-$24,A4),A0
+            lea     (-$17,A4),A1
+            suba.l  A0,A1
+            move.l  A1,D0
+            moveq   #113,D1
+            lea     .L3,A6
+.L2:
+            move.b  (A0)+,D2
+            movem.l A6-A0/D7-D0,-(SP)
+            jmp     WrXByte
+.L3:
+            movem.l (SP)+,D0-D7/A0-A6
+            addq.b  #1,D1
+            dbf     D0,.L2
+            rts
+TMcmd8:
+            moveq   #0,D6
+            move.l  (A0),D7
+            movea.l ($8,A0),A1
+            movea.l ($4,A0),A0
+.L1:
+            move.l  D7,D1
+            andi.l  #$FF00,D1
+            lsr.w   #8,D1
+            subi.w  #128,D1
+            cmp.w   MaxNTst,D1
+            bge.b   .L6
+            asl.w   #1,D1
+            lea     NJump,A5
+            move.w  (A5,D1),D1
+            lea     (A5,D1),A5
+            lea     .L2,A6
+            jmp     (A5)
+.L2:
+            tst.l   D6
+            bne.b   .L3
+            bra.b   .L5
+.L3:
+            btst.l  #loop,D7
+            beq.b   .L4
+.L3_1:      
+            lea     .L3_1,A6
+            jmp     (A5)
+.L4:
+            btst.l  #stop,D7
+            bne.b   .L6
+.L5:
+            subq.b  #1,D7
+            bne.b   .L1
+.L6:
+            move    (SP)+,SR
+            movem.l (SP)+,D0-D5/A0-A6
+            rts
+TMEntry0:
+            moveq   #0,D6
+            moveq   #0,D5
+TMEntry1:
+            move.w  #powerCntl*100+1,D0
+            move.l  #(1<<pTurnOn|1<<pMinus5V|1<<pASC|1<<pSerDrvr|1<<pHD|1<<pSCC|1<<pIWM)*1000000,D1
+            lea     .L1,A6
+            jmp     QuasiPwrMgr
+.L1:
+            lea     .checkForASC,A6
+            move.w  #powerCntl*100+1,D0
+            move.l  #(1<<pTurnOn)*1000000,D1
+            jmp     QuasiPwrMgr
+.checkForASC:
+            btst.l  #test,D7
+            bne.b   .SkipSound
+            movea.l D7,A3
+            move    A3,USP
+            lea     Sound_Base,A3
+            lea     .L2,A6
+            jmp     ErrorBeep4
+.L2:
+            move    USP,A3
+            move.l  A3,D7
+.SkipSound:
+            ori     #$300,SR
+            moveq   #0,D5
+            lea     getCmd,A6
+            jmp     SetupBases
+getCmd:
+            lea     .L1,A6
+            jmp     GetChar
+.L1:
+            tst.w   D5
+            bpl.b   .gotChar
+            btst.l  #nosleep,D7
+            bne.w   TMRestart_Continue
+            move.w  #batteryRead*100+0,D0
+            lea     .L2,A6
+            jmp     QuasiPwrMgr
+.L2:
+            btst.l  #excp,D1
+            bne.w   TMRestart_Continue
+            move.l  #$FFFF0800,D4
+.L3:
+            swap    D4
+.L4:
+            dbf     D4,.L4
+            move.w  #batteryRead*100+0,D0
+            lea     .L5,A6
+            jmp     QuasiPwrMgr
+.L5:
+            btst.l  #excp,D1
+            bne.w   TMRestart_Continue
+            swap    D4
+            dbf     D4,.L3
+            move.w  #sleepReq*100+4,D0
+            move.l  #sleepSig,D1
+            lea     TMRestart_Continue,A6
+            jmp     QuasiPwrMgr
+.gotChar:
+            andi.b  #$7F,D5
+            cmpi.b  #'*',D5
+            bne.b   .checkCmd
+            bset.l  #star,D7
+            bra.w   TMRestart_Continue
+.checkCmd:
+            btst.l  #star,D7
+            beq.w   .DoTest_Invalid
+            bclr.l  #star,D7
+            cmpi.b  #'S',D5
+            bne.b   .LoadAddr
+            bclr.l  #MsgQ,D7
+            bclr.l  #timer,D7
+            bra.w   EchoCmd
+; LoadAddr - (*L)
+; 
+; Set the load address register (A4)
+.LoadAddr:
+            cmpi.b  #'L',D5
+            bne.b   .ByteCnt
+            moveq   #4,D2
+            lea     .LoadAddr2,A6
+            jmp     GetNBytes
+.LoadAddr2:
+            movea.l D1,A4
+            btst.l  #echo,D7
+            beq.w   EchoCmd
+            bclr.l  #crlf,D7
+            move.l  D1,D0
+            moveq   #4,D2
+            lea     EchoCmd,A6
+            jmp     PutNBytes
+; ByteCnt - (*B)
+; 
+; Set byte count (D4)
+.ByteCnt:
+            cmpi.b  #'B',D5
+            bne.b   .GetData
+            moveq   #2,D2
+            lea     .ByteCnt2,A6
+            jmp     GetNBytes
+.ByteCnt2:
+            move.w  D1,D4
+            btst.l  #echo,D7
+            beq.w   EchoCmd
+            bclr.l  #crlf,D7
+            move.l  D1,D0
+            moveq   #2,D2
+            lea     EchoCmd,A6
+            jmp     PutNBytes
+; GetData - (*D)
+; 
+; Get data from serial input, store the data, and generate a checksum.
+; 
+; Inputs:   A4      Start address
+;           D4.hw   Number of bytes to load
+; Output:   D6      Checksum
+.GetData:
+            cmpi.b  #'D',D5
+            bne.b   .Checksum
+            moveq   #0,D6
+            subq.w  #1,D4
+            bge.b   .GetData2
+            clr.w   D4
+.GetData2:
+            move.w  #1,D2
+            lea     .GetData3,A6
+            jmp     GetNBytes
+.GetData3:
+            move.b  D1,(A4)+
+            moveq   #0,D0
+            move.b  D1,D0
+            add.l   D0,D6
+            dbf     D4,.GetData2
+            bra.w   EchoCmd
+.Checksum:
+            cmpi.b  #'C',D5
+            bne.b   .Execute
+            moveq   #0,D6
+            subq.w  #1,D4
+            bge.b   .Checksum1
+            clr.w   D4
+.Checksum1:
+            move.b  (A4)+,D1
+            moveq   #0,D0
+            move.b  D1,D0
+            add.l   D0,D6
+            dbf     D4,.Checksum1
+            bclr.l  #crlf,D7
+            move.l  D6,D0
+            moveq   #4,D2
+            lea     EchoCmd,A6
+            jmp     PutNBytes
+.Execute:
+            cmpi.b  #'G',D5
+            bne.b   .LoadA0
+            moveq   #4,D2
+            lea     .Execute2,A6
+            jmp     GetNBytes
+.Execute2:
+            movea.l D1,A3
+            move.b  #$2A,D0
+            lea     .Execute3,A6
+            jmp     SendString
+.Execute3:
+            move.b  #$47,D0
+            lea     .Execute4,A6
+            jmp     SendString
+.Execute4:
+            bset.l  #crlf,D7
+            moveq   #0,D2
+            lea     .Execute5,A6
+            jmp     PutNBytes
+.Execute5:
+            bclr.l  #crlf,D7
+            lea     EchoCmd,A6
+            jmp     (A3)
+.LoadA0:
+            cmpi.b  #'0',D5
+            bne.b   .LoadA1
+            moveq   #4,D2
+            lea     .LoadA0_2,A6
+            jmp     GetNBytes
+.LoadA0_2:
+            movea.l D1,A0
+            btst.l  #echo,D7
+            beq.w   EchoCmd
+            bclr.l  #crlf,D7
+            move.l  D1,D0
+            moveq   #4,D2
+            lea     EchoCmd,A6
+            jmp     PutNBytes
+.LoadA1:
+            cmpi.b  #'1',D5
+            bne.b   .SetCache
+            moveq   #4,D2
+            lea     .LoadA1_2,A6
+            jmp     GetNBytes
+.LoadA1_2:
+            movea.l D1,A1
+            btst.l  #echo,D7
+            beq.w   EchoCmd
+            bclr.l  #crlf,D7
+            move.l  D1,D0
+            moveq   #4,D2
+            lea     EchoCmd,A6
+            jmp     PutNBytes
+.SetCache:
+            cmpi.b  #'2',D5
+            bne.b   .MMUDis
+            bra.w   EchoCmd
+.MMUDis:
+            cmpi.b  #'3',D5
+            bne.b   .ClearResult
+            bra.w   EchoCmd
+.ClearResult:
+            cmpi.b  #'4',D5
+            bne.b   .StartBootMsg
+            clr.w   D7
+            moveq   #0,D6
+            bra.w   EchoCmd
+.StartBootMsg:
+            cmpi.b  #'5',D5
+            bne.b   .CPUReset
+            bset.l  #timer,D7
+            bset.l  #MsgQ,D7
+            move.w  #sec,D4
+            swap    D4
+            lea     EchoCmd,A6
+            jmp     StartTimer
+.CPUReset:
+            cmpi.b  #'6',D5
+            bne.b   .PreventSleep
+            bra.w   EchoCmd
+.PreventSleep:
+            cmpi.b  #'7',D5
+            bne.b   .cmdU
+            bset.l  #nosleep,D7
+            bra.w   EchoCmd
+.cmdU:
+            cmpi.b  #'U',D5
+            bne.b   .cmdW
+            bra.w   EchoCmd
+.cmdW:
+            cmpi.b  #'W',D5
+            bne.b   .cmdQ
+            bra.w   EchoCmd
+.cmdQ:
+            cmpi.b  #'Q',D5
+            bne.b   .ASCIIMode
+            bra.w   EchoCmd
+.ASCIIMode:
+            cmpi.b  #'A',D5
+            bne.b   .HEXMode
+            bset.l  #aski,D7
+            bra.w   EchoCmd
+.HEXMode:
+            cmpi.b  #'H',D5
+            bne.b   .SendResults
+            bclr.l  #aski,D7
+            bra.w   EchoCmd
+.SendResults:
+            cmpi.b  #'R',D5
+            bne.b   .MemDump
+            bclr.l  #crlf,D7
+            move.l  D6,D0
+            moveq   #4,D2
+            lea     .SendResults2,A6
+            jmp     PutNBytes
+.SendResults2:
+            bclr.l  #crlf,D7
+            move.w  D7,D0
+            moveq   #2,D2
+            lea     EchoCmd,A6
+            jmp     PutNBytes
+.MemDump:
+            cmpi.b  #'M',D5
+            bne.b   .EchoOn
+            asr.w   #2,D4
+            subq.w  #1,D4
+            bge.b   .MemDump2
+            clr.w   D4
+.MemDump2:
+            bset.l  #crlf,D7
+.MemDump3:
+            move.l  (A4)+,D0
+            lea     .MemDump4,A6
+            moveq   #4,D2
+            jmp     PutNBytes
+.MemDump4:
+            dbf     D4,.MemDump3
+            bra.w   EchoCmd
+.EchoOn:
+            cmpi.b  #'E',D5
+            bne.b   .InitTestManager
+            bset.l  #echo,D7
+            bra.w   EchoCmd
+.InitTestManager:
+            cmpi.b  #'I',D5
+            bne.b   .PwrMgrCmd
+            jmp     StartTest1
+.PwrMgrCmd:
+            cmpi.b  #'P',D5
+            bne.b   .DoCritTestCmd
+            movea.l D5,A3
+            moveq   #2,D2
+            lea     .PwrMgrCmd2,A6
+            jmp     GetNBytes
+.PwrMgrCmd2:
+            move.w  D1,D3
+            tst.b   D3
+            beq.b   .PwrMgrCmd4
+            cmpi.b  #4,D3
+            bls.b   .PwrMgrCmd3
+            lea     EchoCmd,A6
+            jmp     TMErrorSend
+.PwrMgrCmd3:
+            move.b  D3,D2
+            andi.l  #$FF,D2
+            lea     .PwrMgrCmd4,A6
+            jmp     GetNBytes
+.PwrMgrCmd4:
+            move.w  D3,D0
+            moveq   #4,D2
+            sub.b   D0,D2
+            asl.b   #3,D2
+            asl.l   D2,D1
+            lea     .PwrMgrCmd5,A6
+            jmp     QuasiPwrMgr
+.PwrMgrCmd5:
+            move.w  D0,D7
+            move.l  D1,D6
+            move.l  A3,D5
+            bra.w   EchoCmd
+.DoCritTestCmd:
+            cmpi.b  #'T',D5
+            bne.w   .DoNonCritTestCmd
+            moveq   #4,D2
+            lea     .DoCritTest,A6
+            jmp     GetNBytes
+.DoCritTest:
+            movea.l D1,A2
+            move    A2,USP
+            moveq   #2,D2
+            lea     .DoCritTest2,A6
+            jmp     GetNBytes
+.DoCritTest2:
+            move.w  D1,D4
+            move.w  #$1C,D2
+            lsl.l   D2,D1
+            or.l    D1,D7
+            btst.l  #echo,D7
+            beq.b   .DoCritTestLoop
+            move    USP,A2
+            move.l  A2,D0
+            moveq   #4,D2
+            lea     .DoCritTest3,A6
+            jmp     PutNBytes
+.DoCritTest3:
+            move.w  D4,D0
+            moveq   #2,D2
+            lea     .DoCritTestLoop,A6
+            jmp     PutNBytes
+.DoCritTestLoop:
+            moveq   #0,D6
+            move    USP,A2
+            move.l  A2,D1
+            swap    D1
+            move.b  #'?',D5
+            cmp.w   MaxTest,D1
+            bge.w   .DoTest_Invalid
+            asl.w   #1,D1
+            lea     TJump,A5
+            move.w  (A5,D1),D1
+            lea     (A5,D1),A5
+            lea     .DoCritTest4,A6
+            jmp     (A5)
+.DoCritTest4:
+            tst.l   D6
+            beq.b   .DoCritTestContinue
+            lea     .DoCritTest5,A6
+            jmp     TMErrorSend
+.DoCritTest5:
+            btst.l  #loop,D7
+            beq.b   .DoCritTestNoLoop
+.DoCritTestErrLoop:
+            lea     .DoCritTestErrLoop,A6
+            jmp     (A5)
+.DoCritTestNoLoop:
+            btst.l  #stop,D7
+            bne.b   .DoCritTestEcho
+.DoCritTestContinue:
+            move    USP,A2
+            move.l  A2,D1
+            subq.w  #1,D1
+            movea.l D1,A2
+            move    A2,USP
+            tst.w   D1
+            beq.b   .DoCritTestEcho
+            lea     .DoCritTest6,A6
+            jmp     GetChar
+.DoCritTest6:
+            tst.w   D5
+            bmi.b   .DoCritTestLoop
+.DoCritTestEcho:
+            move.l  #$540054,D5                     ; Fake a "T" to echo
+            bra.w   EchoCmd
+.DoNonCritTestCmd:
+            cmpi.b  #'N',D5
+            bne.w   .DoTest_Invalid
+            moveq   #4,D2
+            lea     .DoNonCritTest,A6
+            jmp     GetNBytes
+.DoNonCritTest:
+            movea.l D1,A2
+            move    A2,USP
+            moveq   #2,D2
+            lea     .DoNonCritTest2,A6
+            jmp     GetNBytes
+.DoNonCritTest2:
+            move.w  D1,D4
+            move.w  #$1C,D2
+            lsl.l   D2,D1
+            or.l    D1,D7
+            btst.l  #echo,D7
+            beq.b   .DoNonCritTest4
+            move    USP,A2
+            move.l  A2,D0
+            moveq   #4,D2
+            lea     .DoNonCritTest3,A6
+            jmp     PutNBytes
+.DoNonCritTest3:
+            move.w  D4,D0
+            moveq   #2,D2
+            lea     .DoNonCritTest4,A6
+            jmp     PutNBytes
+.DoNonCritTest4:
+            moveq   #0,D6
+            move    USP,A2
+            move.l  A2,D1
+            swap    D1
+            move.b  #'?',D5
+            subi.w  #$80,D1
+            cmp.w   MaxNTst,D1
+            bge.b   .DoTest_Invalid
+            asl.w   #1,D1
+            lea     NJump,A5
+            move.w  (A5,D1),D1
+            lea     (A5,D1),A5
+            lea     .DoNonCritTest5,A6
+            jmp     (A5)
+.DoNonCritTest5:
+            move    USP,A2
+            move.l  A2,D1
+            swap    D1
+            cmpi.w  #$84,D1
+            beq.b   .DoNonCritTest6
+            cmpi.w  #$85,D1
+            beq.b   .DoNonCritTest6
+            cmpi.w  #$86,D1
+            bne.b   .DoNonCritTest7
+.DoNonCritTest6:
+            lea     .DoNonCritTest7,A6
+            jmp     SetupBases
+.DoNonCritTest7:
+            tst.l   D6
+            beq.b   .DoNonCritTest11
+            lea     .DoNonCritTest8,A6
+            jmp     TMErrorSend
+.DoNonCritTest8:
+            btst.l  #loop,D7
+            beq.b   .DoNonCritTest10
+.DoNonCritTest9:
+            lea     .DoNonCritTest9,A6
+            jmp     (A5)
+.DoNonCritTest10:
+            btst.l  #stop,D7
+            bne.b   .DoNonCritTest13
+.DoNonCritTest11:
+            move    USP,A2
+            move.l  A2,D1
+            subq.w  #1,D1
+            movea.l D1,A2
+            move    A2,USP
+            tst.w   D1
+            beq.b   .DoNonCritTest13
+            lea     .DoNonCritTest12,A6
+            jmp     GetChar
+.DoNonCritTest12:
+            tst.w   D5
+            bmi.w   .DoNonCritTest4
+.DoNonCritTest13:
+            move.l  #$4E004E,D5
+            bra.b   EchoCmd
+.DoTest_Invalid:
+            clr.w   D0
+            move.b  D5,D0
+            lea     EchoCmd_End,A6
+            jmp     SendString
+EchoCmd:
+            move.b  #$2A,D0
+            lea     .L1,A6
+            jmp     SendString
+.L1:
+            swap    D5
+            move.b  D5,D0
+            swap    D5
+            lea     .L2,A6
+            jmp     SendString
+.L2:
+            bset.l  #crlf,D7
+            moveq   #0,D2
+            lea     EchoCmd_End,A6
+            jmp     PutNBytes
+EchoCmd_End:
+            bclr.l  #crlf,D7
+TMRestart_Continue:
+            btst.l  #MsgQ,D7
+            beq.b   .NoUnQ
+            btst.l  #timer,D7
+            beq.b   .NoTimer
+            move.w  #sec,D0
+            lea     .L1,A6
+            jmp     TMRestart_SubVIA
+.L1:
+            tst.w   D0
+            bpl.b   .NoUnQ
+.NoTimer:
+            lea     .a1MsgLength,A1
+            clr.w   D4
+            move.b  (A1)+,D4
+.L2:
+            move.b  (A1)+,D0
+            lea     .L3,A6
+            jmp     SendString
+.L3:
+            dbf     D4,.L2
+            bclr.l  #crlf,D7
+            bset.l  #aski,D7
+            move.l  D6,D0
+            moveq   #4,D2
+            lea     .L4,A6
+            jmp     PutNBytes
+.L4:
+            move.w  D7,D0
+            moveq   #2,D2
+            lea     .L5,A6
+            jmp     PutNBytes
+.L5:
+            bclr.l  #aski,D7
+            lea     .b1MsgLength,A1
+            clr.w   D4
+            move.b  (A1)+,D0
+.L6:
+            move.b  (A1)+,D0
+            lea     .L7,A6
+            jmp     SendString
+.L7:
+            dbf     D4,.L6
+            btst.l  #timer,D7
+            bne.b   .NoUnQ
+            bclr.l  #MsgQ,D7
+.NoUnQ:
+            bra.w   getCmd
+.a1MsgLength:
+            dc.b    6
+.a1Msg:
+            dc.b    '*APPLE*'
+.b1MsgLength:
+            dc.b    4
+.b1Msg:
+            dc.b    '*6*\r\n'
+TMErrorSend:
+            movea.l A6,A4
+            lea     .ErrorMsgLength,A1
+            clr.w   D1
+            move.b  (A1)+,D1
+.L1:
+            move.b  (A1)+,D0
+            lea     .L2,A6
+            jmp     SendString
+.L2:
+            dbf     D1,.L1
+            jmp     (A4)
+.ErrorMsgLength:
+            dc.b    6
+.ErrorMsg:
+            dc.b    '*ERROR*'
+GetChar:
+            move.w  #$8000,D5
+            btst.l  #SCCok,D7
+            beq.b   .Exit
+            lea     SCCRBase,A2
+            btst.b  #RxCA,(SCCR_aCtl-SCCRBase,A2)
+            beq.b   .Exit
+            move.b  #1,D0
+            lea     SCCWBase,A2
+            move.b  D0,(SCCW_aCtl-SCCWBase,A2)
+            lea     SCCRBase,A2
+            move.b  (SCCR_aCtl-SCCRBase,A2),D0
+            andi.b  #%1110000,D0
+            beq.b   .L1
+            lea     SCCWBase,A2
+            move.b  #$30,(SCCW_aCtl-SCCWBase,A2)
+.L1:
+            bclr.l  #$F,D5
+            lsl.l   #8,D0
+            or.w    D0,D5
+            lea     SCCRBase,A2
 
+.Exit:
 
 
 

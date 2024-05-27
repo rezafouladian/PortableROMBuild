@@ -9,11 +9,15 @@ IWMInitMode     EQU         $17
 
 TROMCode        EQU         $55AAAA55
 
+sleepSig        EQU         'MATT'
+
 powerCntl       EQU         $10
 pMgrADBoff      EQU         $21                     ; Turn ADB auto-poll off
 timeRead        EQU         $38                     ; Read the time from the clock chip
 xPramRead       EQU         $3A                     ; Read extended PRAM
+batteryRead     EQU         $68
 readINT         EQU         $78                     ; Get Power Manager interrupt data
+sleepReq        EQU         $7F
 PmgrSelfTest    EQU         $EC                     ; Run Power Manager self test
 
 pIWM            EQU         0                       ; IWM power
@@ -111,12 +115,18 @@ ZDCode          EQU         $0400                   ; Zero divide error exceptio
 CICode          EQU         $0500
 TPCode          EQU         $0600
 PVCode          EQU         $0700
+TECode          EQU         $0800
 
 sec             EQU         $C
 
 MsgQ            EQU         16
+SCCok           EQU         17
 nosleep         EQU         18
+star            EQU         19
+aski            EQU         20
+echo            EQU         21
 timer           EQU         22
+crlf            EQU         23
 excp            EQU         24
 test            EQU         26
 beok            EQU         27
@@ -126,3 +136,5 @@ pram            EQU         30
 boot            EQU         31
 
 oneSecIntFlag   EQU         27
+
+RxCA            EQU         0                       ; SCC Receive Character Available

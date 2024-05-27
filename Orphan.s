@@ -35,7 +35,7 @@ InitIWM:
 
             org     $900732
 InitSCSI:
-            lea     SCSIwrite,A0
+            lea     SCSIwr,A0
             clr.b   ($10,A0)
             
 
@@ -153,4 +153,95 @@ InitIWMGlobals:
             org     $9007D4
 InitSCCGlobals:
 
-            
+            org     $90195E
+PutNBytes:
+
+            org     $901924
+GetNBytes:
+
+            org     $9019F8
+SetupBases:
+
+            org     $9019CA
+SendString:
+
+            org     $901A80
+TMRestart_SubVIA:
+
+            org     $904AA8
+ErrorBeep1:
+            lea     $904BDC,A4
+            bra     DoBeep
+ErrorBeep2:
+            lea     $904BFC,A4
+            bra     DoBeep
+ErrorBeep3:
+            lea     $904C10,A4
+            bra     DoBeep
+ErrorBeep4:
+            lea     $904C28,A4
+DoBeep:
+
+            org     $901AB4
+StoreResults:
+
+            org     $901AB8
+WrXByte:
+
+            org     $901A62
+StartTimer:
+
+            org     $9025C2
+TestSCSI:
+
+            org     $90215A
+MapRamUniqTest:
+
+            org     $90210E
+MapRamDataTest:
+
+            org     $902064
+NoTest:
+
+            org     $901F90
+ExtRAMTest:
+
+            org     $9027DE
+PRAMTest:
+
+            org     $901E2E
+RevMod3Test:
+
+            org     $901F22
+RomTest:
+
+            org     $901FEE
+AddrLineTest:
+
+            org     $9026A6
+TestASC:
+
+            org     $902444
+ViaTest:
+
+            org     $90229A
+SccLoopTest:
+
+            org     $90235A
+SccTimerTest:
+
+            org     $904A98
+BootBeep:
+
+            org     $902322
+SccRegTest:
+
+            org     $903EA6
+SizeMemory:
+
+            org     $902068
+VramAddrTest:
+
+            org     $9020E2
+VramDataTest:
+
