@@ -18,25 +18,6 @@ WakeUp:
             move    #$2700,SR
             movea.l PowerMgrVars,A2
 
-            org     $90079E
-InitVIA:
-            movea.l #VIA_Base,A0
-
-            org     $900808
-InitSCC:
-            movea.l #SCCWBase,A0
-
-            org     $900754
-InitIWM:
-            movea.l #DBase,A0
-            ;moveq   #IWMInitMode,D0
-.L1:
-            move.b  #$BE,($C00,A0)
-
-            org     $900732
-InitSCSI:
-            lea     SCSIwr,A0
-            clr.b   ($10,A0)
             
 
 
@@ -45,24 +26,11 @@ InitSCSI:
 SysErrInit:
             suba.l  A0,A0
 
-            org     $9007C0
-VIATimerEnables:
-            movea.l #VIA_Base,A0
-
 
 
             org     $9051CE
 InitIntHandler:
 
-
-            org     $900970
-InitMemMgr:
-
-
-            
-
-            org     $90098E
-InitRsrcMgr:
             
             org     $915B58
 NMInit:
@@ -74,18 +42,9 @@ InitTimeMgr:
             org     $90353A
 CritErr:
 
-            org     $9009B0
-GoofyDoEject:
+            org     $909920
+DoEject:
 
-
-
-
-
-            org     $90099E
-InitDTQueue:
-
-            org     $900836
-InitVidGlobals:
 
 
 
@@ -96,14 +55,8 @@ InitQueue:
             org     $906A96
 InitSCSIMgr:
 
-            org     $900902
-InitIOMgr:
-
             org     $9053B8
 InitADB:
-
-            org     $90088A
-InitCrsrMgr:
 
             org     $916E4C
 InitGestalt:
@@ -135,36 +88,13 @@ FDBShiftInt_VIA2:
             org     $91642E
 NMGNEFilter:
 
-            org     $90087A
-InitCrsrVars:
-
             org     $90651E
 FSIODNETbl:
-    
-            org     $900718
-InitSCSIGlobals:
 
-            org     $900794
-InitVIAGlobals:
-
-            org     $90074A
-InitIWMGlobals:
-
-            org     $9007D4
-InitSCCGlobals:
-
-            org     $90195E
-PutNBytes:
-
-            org     $901924
-GetNBytes:
 
             org     $9019F8
 SetupBases:
-
-            org     $9019CA
-SendString:
-
+    
             org     $901A80
 TMRestart_SubVIA:
 
@@ -247,4 +177,10 @@ VramDataTest:
 
             org     $901AD8
 RdXByte:
-            
+
+
+            org     $9269CC
+CrsrDevHandleVBL:
+
+            org     $92679C
+InitCrTable:

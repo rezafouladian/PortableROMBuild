@@ -71,7 +71,14 @@ BatFreq         EQU         60*1                    ; Battery level monitor VBL 
 
 FBDBSize        EQU         370
 
-hcVideoSize     EQU         8000
+hcVideoSize     EQU         $8000
+VideoWidth      EQU         640
+VideoHeight     EQU         400
+NTSCMaxX        EQU         512
+NTSCOffset      EQU         8
+LCDmode         EQU         0
+Mac2Mode        EQU         1
+NTSCmode        EQU         2
 
 boxSE           EQU         $FF
 boxPortable     EQU         4
@@ -116,6 +123,30 @@ CICode          EQU         $0500
 TPCode          EQU         $0600
 PVCode          EQU         $0700
 TECode          EQU         $0800
+ATCode          EQU         $0900
+FTCode          EQU         $0A00
+UNCode          EQU         $0B00
+CPCode          EQU         $0C00
+FMCode          EQU         $0D00
+SICode          EQU         $0E00
+TNCode          EQU         $0F00
+L1Code          EQU         $1000
+L2Code          EQU         $1100
+L3Code          EQU         $1200
+L4Code          EQU         $1300
+L5Code          EQU         $1400
+L6Code          EQU         $1500
+L7Code          EQU         $1600
+F1Code          EQU         $1700
+F2Code          EQU         $1800
+F3Code          EQU         $1900
+F4Code          EQU         $1A00
+F5Code          EQU         $1B00
+F6Code          EQU         $1C00
+F7Code          EQU         $1D00
+PCCode          EQU         $1E00
+PICode          EQU         $1F00
+PACode          EQU         $2000
 
 sec             EQU         $C
 
@@ -128,6 +159,7 @@ echo            EQU         21
 timer           EQU         22
 crlf            EQU         23
 excp            EQU         24
+nmi             EQU         25
 test            EQU         26
 beok            EQU         27
 stop            EQU         28
@@ -140,3 +172,16 @@ oneSecIntFlag   EQU         27
 RxCA            EQU         0                       ; SCC Receive Character Available
 
 BootStackSize   EQU         8*1024
+
+ADBCount        EQU         0
+MaxCnt          EQU         ADBCount+2
+Err7            EQU         MaxCnt+2
+Err6            EQU         Err7+2
+Err5            EQU         Err6+2
+Err4            EQU         Err5+2
+Err3            EQU         Err4+2
+Err2            EQU         Err3+2
+Err1            EQU         Err2+2
+Error           EQU         Err1+2
+GSize           EQU         Error+2
+TotalSize       EQU         GSize+8

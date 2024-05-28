@@ -1,3 +1,7 @@
+    macro _Open
+        dc.w    $A000
+    endm
+    
     macro _InitZone
         dc.w    $A019
     endm
@@ -40,6 +44,10 @@
 
     macro _IdleUpdate
         dc.w    $A285
+    endm
+
+    macro _NewPtrSys
+        dc.w    $A51E
     endm
 
     macro _NewPtrSysClear
@@ -88,4 +96,12 @@
 
     macro _FillRoundRect
         dc.w    $A8B4
+    endm
+
+    macro _InitResources
+        dc.w    $A995
+    endm
+
+    macro _GetResource
+        dc.w    $A9A0
     endm

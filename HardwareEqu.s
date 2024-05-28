@@ -69,7 +69,41 @@ TimeDBRA        EQU         $D00
 IllegalInstructionVector    EQU $10
 JFetch          EQU         $8F4
 VBLQueue        EQU         $160
-
+TimeSCCDB       EQU         $D02
+TimeSCSIDB      EQU         $B24
+DtskQHdr_Flags  EQU         $D92
+ADBDelay        EQU         $CEA
+SCSIBase        EQU         $C00
+SCSIDMA         EQU         $C04
+SCSIHsk         EQU         $C08
+IWM             EQU         $1E0
+SCCRd           EQU         $1D8
+SCCWr           EQU         $1DC
+PollProc        EQU         $13E
+ScrnBase        EQU         $824
+ScreenBytes     EQU         $C24
+RowBits         EQU         $C20
+ColLines        EQU         $C22
+ScreenRow       EQU         $106
+VertRRate       EQU         $D30
+ScrVRes         EQU         $102
+JHideCursor     EQU         $800
+JShowCursor     EQU         $804
+GrafBegin       EQU         $800
+GrafEnd         EQU         $8F2
+MTemp           EQU         $828
+MickeyBytes     EQU         $D6A
+CrsrNew         EQU         $8CE
+MouseMask       EQU         $8D6
+UnitNtryCnt     EQU         $1D2
+UTableBase      EQU         $11C
+ROMMapInsert    EQU         $B9E
+Lo3Bytes        EQU         $31A
+MinStack        EQU         $31E
+DefltStack      EQU         $322
+MMDefFlags      EQU         $326
+SysMap          EQU         $A58
+TopMapHndl      EQU         $A50
 
 
 
@@ -83,6 +117,7 @@ VIA_T2_L        EQU         $F71000
 VIA_DDR_A       EQU         $F70600
 VIA_DDR_B       EQU         $F70400
 VIA_ORA         EQU         $F71E00
+VIA_PCR         EQU         $F71800
 
 SCCRBase        EQU         $FD0000
 SCCWBase        EQU         $FD8000
@@ -98,6 +133,8 @@ q6L             EQU         DBase+$1800
 q6H             EQU         DBase+$1A00
 q7L             EQU         DBase+$1C00
 q7H             EQU         DBase+$1E00
+ph3L            EQU         DBase+$C00
+mtrOff          EQU         DBase+$1000
 
 
 SCSI_Base       EQU         $F90000
@@ -105,6 +142,10 @@ SCSIrd          EQU         $F90000
 SCSIwr          EQU         $F90001
 sICRread        EQU         $F90010
 sICRwrite       EQU         $F90011
+sMRwrite        EQU         $F90021
+sTCRwrite       EQU         $F90031
+sCSRread        EQU         $F90040
+sCSRwrite       EQU         $F90041
 
 DiagROM         EQU         $F80000
 DiagROM1        EQU         $F80080

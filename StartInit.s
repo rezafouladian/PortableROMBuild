@@ -31,6 +31,17 @@ PortableAbs EQU     0
             ENDIF
             endm
 
+            macro BigLea
+                lea (\1-*),\2
+                lea (*-6,PC,\2.l),\2
+            endm
+
+            macro BSR6
+                lea .\@,A6
+                jmp (\1,PC)
+            .\@:
+            endm
+
             org     BaseOfROM
 Checksum    dc.l    $96CA3846
 StartPC     dc.l    ResetEntry
@@ -66,10 +77,7 @@ StartBoot:
             move.l  A0,D0
             bne.b   .L1
             move.l  #BaseOfROM,D0
-            jmp     (.L1,PC,D0*1)
-            ; ^ Miscompare: (Original 4E FB 08 02) - (Assembled 4E FB 00 02)
-            ; Location: 90006A
-            ; Disassembled: jmp     (0x90006E,PC,D0w*0x1)
+            jmp     (.L1,PC,D0.l)
 .L1:
             tst.w   Clock16M
             move.w  #RAMconfigInit,RAMconfigBase
@@ -125,9 +133,7 @@ BootRetry:
             move.b  #$4,(VIA_IER-VIA_Base,A1)
             bsr.w   InitGlobalVars                  ; Initialize a bunch of global variables
 .P0         lea     (InitIntHandler-.P0).l,A0
-            jsr     (.P0,PC,A0)                     ; Intialize interrupt vectors and dispatch table
-            ; ^ Miscompare: (Original 4E BB 88 F8) - (Assembled 4E BB 80 F8)
-            ; Location: 900134
+            jsr     (.P0,PC,A0.l)                   ; Intialize interrupt vectors and dispatch table
             bsr.w   InitDispatcher
             bsr.w   GetPRAM
             bsr.w   InitMemMgr
@@ -136,9 +142,9 @@ BootRetry:
             bsr.w   InitPMgrVars
             bsr.w   InitRsrcMgr
 .P1         lea     (NMInit-.P1).l,A0
-            jsr     (.P1,PC,A0)
+            jsr     (.P1,PC,A0.l)
 .P2         lea     (InitTimeMgr-.P2).l,A0
-            jsr     (.P2,PC,A0)
+            jsr     (.P2,PC,A0.l)
             bsr.w   InitADBvars
             bsr.w   InitShutdownMgr
             bsr.w   InitDTQueue
@@ -151,10 +157,10 @@ BootRetry:
             lea     ($308).w,A1
             jsp     InitQueue
 .P3         lea     (InitSCSIMgr-.P3).l,A0
-            jsr     (.P3,PC,A0)
+            jsr     (.P3,PC,A0.l)
             bsr.w   InitIOMgr
 .P4         lea     (InitADB-.P4).l,A0
-            jsr     (.P4,PC,A0)
+            jsr     (.P4,PC,A0.l)
             bsr.w   InitCrsrMgr
             moveq   #$70,D0                         
             _NewPtrSysClear
@@ -163,7 +169,7 @@ BootRetry:
             move.w  #$106,(A0)+
             move.l  #$70,(A0)
 .P5         lea     InitGestalt-.P5,A0
-            jsr     (.P5,PC,A0)
+            jsr     (.P5,PC,A0.l)
             movea.l SysZone,a0
             movea.l (A0),A0
             adda.w  #$4000,A0
@@ -278,7 +284,7 @@ DrawBeepScreen:
             cmpi.b  #2,NTSC
             bne.b   .L4
             movea.l #Video_Base,A0
-            move.w  #hcVideoSize,D1
+            move.w  #8000,D1
             subq.w  #1,D1
 .L3:
             move.l  D0,(A0)+
@@ -309,9 +315,6 @@ InitShutdownMgr:
             clr.w   -(SP)
             _Shutdown
             rts
-            IF PortableAbs
-            org     $900322
-            ENDIF
 InitPMgrVars:
             move.l  #158,D0
             _NewPtrSysClear
@@ -364,7 +367,7 @@ InitPMgrVars:
             move.b  #DfltSlpTime,(SlpTimeOut-PmgrPramBase,A0)
             move.b  #DfltHDTime,(HDTimeOut-PmgrPramBase,A0)
             move.w  #$4E3E,(PmgrStatusFlags-PmgrPramBase,A0)
-            move.l  $40070,D0
+            move.l  #$4*$10000+PmgrPramBase,D0
             _WriteXPRam
 .L2:
             move.b  (SlpTimeOut-PmgrPramBase,A0),(SleepTime,A2)
@@ -375,23 +378,17 @@ InitPMgrVars:
             move.b  #%10010000,(VIA_IFR-VIA_Base,A1)
             move.b  #%10010000,(VIA_IER-VIA_Base,A1)
             rts
-            IF PortableAbs
-            org     $900416
-            ENDIF
 InitADBvars:
             move.l  #FBDBSize,D0                    ; Get local data area length
             _NewPtrSysClear                         ; Allocate space on heap and clear
             move.l  A0,ADBBase                      ; Save pointer to ADBBase
 .P1         lea     (ADBProc-.P1).l,A0              ; Get the ADBProc
-            lea     (.P1,PC,A0),A0
+            lea     (.P1,PC,A0.l),A0
             move.l  A0,JADBProc                     ; Install it into JADBProc vector
 .P2         lea     (FDBShiftInt_VIA2-.P2).l,A0
-            lea     (.P2,PC,A0),A0
+            lea     (.P2,PC,A0.l),A0
             move.l  A0,(Lvl1DT+8)
             rts
-            IF PortableAbs
-            org     $900440
-            ENDIF
 InitHiMemGlobals:
             move.w  #-$1,PWMValue                   ; Set current PWM speed invalid
             movea.l A5,A0
@@ -423,7 +420,7 @@ InitGlobalVars:
             clr.l   DSAlertTab
             move.w  MinusOne,FSFCBLen               ; Mark that FS needs (re)initialization
 .P1         lea     (FSIODNETbl-.P1).l,A0           ; Point to the offset table
-            lea     (.P1,PC,A0),A0
+            lea     (.P1,PC,A0.l),A0
             lea     JFetch,A1                       ; Point to first jump table entry
             moveq   #2,D1                           ; There are 3 vectors
             bsr.w   JmpTblInit
@@ -446,7 +443,7 @@ InitGlobalVars:
             clr.w   SysVersion
             bclr.b  #0,AlarmState
 .P2         lea     (NMGNEFilter-.P2),A0
-            lea     (.P2,PC,A0),A0
+            lea     (.P2,PC,A0.l),A0
             move.l  A0,GNEFilter
             clr.l   IAZNotify                       ; No InitApplZone notify proc
             move.w  #$FF7F,FlEvtMask                ; Init for disable of DIP flushes
@@ -474,8 +471,6 @@ WDCBSWOS:
             dc.w    $28
 PMPSWOS:
             dc.w    $2E
-
-            ;$38
 InitSwitcherTable:
             moveq   #SwitchLen,D0                   ; Allocate a switcher table
             _NewPtrSysClear                         ; in the system heap
@@ -600,11 +595,272 @@ VIAIntForTimeDBRA:
             move.w  D0,TimeDBRA
             movea.l D1,SP
             andi    #$F8FF,SR                       ; Enable interrupts
-
-
-            IF PortableAbs
-            org     $9009BA
-            ENDIF
+            lea     VIAIntForTimeSCCDB,A0
+            move.l  A0,(Lev1AutoVector)
+            movea.l #SCCRBase,A0
+            moveq   #-1,D0
+            bra.b   .L3
+.L1:
+            move.b  #$F,(VIA_T2_L-VIA_Base,A1)
+            move.b  #$3,(VIA_T2_H-VIA_Base,A1)
+.L2:
+            btst.b  #0,(SCCR_bCtl-SCCRBase,A0)
+            dbf     D0,.L2
+            bra.b   VIAIntForTimeSCCDB
+.L3:
+            bra.b   .L1
+VIAIntForTimeSCCDB:
+            tst.b   (VIA_T2_L-VIA_Base,A1)
+            not.w   D0
+            move.w  D0,TimeSCCDB
+            movea.l D1,SP
+            andi    #$F8FF,SR
+            lea     VIAIntForTimeSCSIDB,A0
+            move.l  A0,Lev1AutoVector
+            movea.l #SCSI_Base,A0
+            moveq   #-1,D0
+            bra.b   .L3
+.L1:
+            move.b  #$F,(VIA_T2_L-VIA_Base,A1)
+            move.b  #$3,(VIA_T2_H-VIA_Base,A1)
+.L2:
+            btst.b  #0,(sCSRread-SCSI_Base,A0)
+            dbf     D0,.L2
+            bra.b   VIAIntForTimeSCSIDB
+.L3:
+            bra.b   .L1
+VIAIntForTimeSCSIDB:
+            tst.b   (VIA_T2_L-VIA_Base,A1)
+            not.w   D0
+            move.w  D0,TimeSCSIDB
+            movea.l D1,SP
+            andi    #$F8FF,SR
+            lea     VIAIntForADBDelay,A0
+            move.l  A0,Lev1AutoVector
+            lea     (VIA_IER-VIA_Base,A1),A0
+            moveq   #-1,D0
+            bra.b   .L3
+.L1:
+            move.b  #$F,(VIA_T2_L-VIA_Base,A1)
+            move.b  #$3,(VIA_T2_H-VIA_Base,A1)
+.L2:
+            btst.b  #0,(A0)
+            dbf     D0,.L2
+            bra.b   VIAIntForADBDelay
+.L3:
+            bra.b   .L1
+VIAIntForADBDelay:
+            tst.b   (VIA_T2_L-VIA_Base,A1)
+            not.w   D0
+            move.w  D0,ADBDelay
+            movea.l D1,SP
+            move.b  #$20,(VIA_IER-VIA_Base,A1)
+            move.l  (SP)+,Lev1AutoVector
+            move    (SP)+,SR
+            rts
+InitSCSIGlobals:
+            move.l  #SCSIrd,SCSIBase
+            move.l  #SCSI_Base+$200,SCSIDMA
+            move.l  #SCSI_Base+$200,SCSIHsk
+            rts
+InitSCSI:
+            lea     SCSIwr,A0
+            clr.b   (sICRwrite-SCSIwr,A0)
+            clr.b   (sMRwrite-SCSIwr,A0)
+            clr.b   (sTCRwrite-SCSIwr,A0)
+            clr.b   (sCSRwrite-SCSIwr,A0)
+            rts
+InitIWMGlobals:
+            move.l  #DBase,IWM
+            rts
+InitIWM:
+            movea.l #DBase,A0
+            moveq   #IWMInitMode,D0
+.L1:
+            move.b  #$BE,(ph3L-DBase,A0)
+            move.b  #$F8,(ph3L-DBase,A0)
+            tst.b   (q7L-DBase,A0)
+            tst.b   (mtrOff-DBase,A0)
+            tst.b   (q6H-DBase,A0)
+            move.b  (q7L-DBase,A0),D2
+            btst.l  #5,D2
+            bne.b   .L1
+            and.b   D0,D2
+            cmp.b   D0,D2
+            beq.b   .Exit
+            move.b  D0,(q7H-DBase,A0)
+            tst.b   (q7L-DBase,A0)
+            bra.b   .L1
+.Exit:
+            tst.b   (q6L-DBase,A0)
+            rts
+InitVIAGlobals:
+            move.l  #VIA_Base,VIA
+            rts
+InitVIA:
+            movea.l #VIA_Base,A0
+            clr.b   (VIA_ORA-VIA_Base,A0)
+            move.b  #$FF,(VIA_DDR_A-VIA_Base,A0)
+            move.b  #$DF,(VIA_BufB-VIA_Base,A0)
+            move.b  #$B9,(VIA_DDR_B-VIA_Base,A0)
+            move.b  #$7F,(VIA_IER-VIA_Base,A0)
+            rts
+VIATimerEnables:
+            movea.l #VIA_Base,A0
+            move.b  #$22,(VIA_PCR-VIA_Base,A0)
+            move.b  #$83,(VIA_IER-VIA_Base,A0)
+            rts
+InitSCCGlobals:
+            move.l  #SCCWBase,SCCWr
+            move.l  #SCCRBase,SCCRd
+            clr.l   PollProc
+            rts
+Gary:
+            dc.b    $9,$40,$4,$4C
+            dc.b    $2,$0,$3,$C0
+            dc.b    $F,$0,$0,$10
+            dc.b    $0,$10,$1,$0
+            dc.b    $9,$80,$4,$4C
+            dc.b    $3,$C0,$F,$0
+            dc.b    $0,$10,$0,$10
+            dc.b    $1,$0
+InitSCC:
+            movea.l #SCCWBase,A0
+            movea.l #SCCRBase,A1
+            lea     Gary,A2
+            moveq   #$10,D1
+            bsr.b   WriteSCC
+            addq.l  #2,A0
+            addq.l  #2,A1
+            moveq   #$E,D1
+            bsr.b   WriteSCC
+            rts
+WriteSCC:
+            move.b  (A1),D2
+            bra.b   .L2
+.L1:
+            move.l  (SP),(SP)
+            move.l  (SP),(SP)
+            move.b  (A2)+,(A0)
+.L2:
+            dbf     D1,.L1
+            rts
+InitVidGlobals:
+            move.l  #Video_Base,ScrnBase
+            move.l  #hcVideoSize,ScreenBytes
+            move.w  #VideoWidth,RowBits
+            move.w  #VideoHeight,ColLines
+            cmpi.b  #NTSCmode,NTSC
+            bne.b   .L1
+            move.w  #NTSCMaxX,RowBits
+            addq.l  #NTSCOffset,ScrnBase
+.L1:
+            move.w  #80,ScreenRow
+            move.w  #60,VertRRate
+            move.l  #$480048,ScrVRes
+            rts
+InitCrsrVars:
+            lea     GrafBegin,A0
+            lea     GrafEnd,A1
+.ZeroLoop:
+            clr.w   (A0)+
+            cmpa.l  A1,A0
+            bcs.b   .ZeroLoop
+            rts
+InitCrsrMgr:
+            move.l  #$F000F,D0
+            lea     MTemp,A0
+            move.l  D0,(A0)+
+            move.l  D0,(A0)+
+            move.l  D0,(A0)+
+            clr.l   (A0)+
+            move.w  ColLines,(A0)+
+            move.w  RowBits,(A0)
+            moveq   #TotalSize,D0                   ; Allocate space for mouse tracking pointer
+            _NewPtrSys                              ; Put in system heap
+            move.l  A0,MickeyBytes                  ; Save globals pointer
+            move.w  #1,(ADBCount,A0)
+            move.w  #8,(MaxCnt,A0)
+            clr.w   (Error,A0)
+            lea     MouseBytes,A1
+            adda.w  #GSize,A0
+            move.l  (A1)+,(A0)+
+            move.l  (A1),(A0)
+            lea     GrafEnd,A1
+            BigLea  CrsrDevHandleVBL,A0
+            move.l  A0,-(A1)
+            move.w  #6,-(A1)
+            BigLea  InitCrTable,A0
+            lea     JHideCursor,A1
+            moveq   #8-1,D1
+            bsr.w   JmpTblInit
+            moveq   #-1,D0
+            move.w  D0,CrsrNew
+            move.l  D0,MouseMask
+            rts
+MouseBytes  dc.b    4,10,15,255,255,83,77,72
+InitIOMgr:
+            moveq   #$40,D0
+            move.w  D0,UnitNtryCnt
+            asl.l   #2,D0
+            _NewPtrSysClear
+            move.l  A0,UTableBase
+            suba.w  #$32,SP
+            movea.l SP,A0
+            clr.b   ($1B,A0)
+            lea     DiskName,A1
+            move.l  A1,($12,A0)
+            _Open
+            lea     EDiskName,A1
+            move.l  A1,($12,A0)
+            _Open
+            lea     SndName,A1
+            move.l  A1,($12,A0)
+            _Open
+            adda.w  #$32,SP
+            subq.w  #4,SP
+            move.l  #'SERD',-(SP)
+            clr.w   -(SP)
+            move.w  #$FFFF,(ROMMapInsert)
+            _GetResource
+            move.l  (SP)+,D0
+            beq.b   .Exit
+            movea.l D0,A0
+            movea.l (A0),A0
+            jsr     (A0)
+.Exit:
+            rts
+DiskName:
+            dc.b    SndName-*-1
+            dc.b    '.Sony'
+SndName:
+            dc.b    EDiskName-*-2
+            dc.b    '.Sound '
+EDiskName:
+            dc.b    InitMemMgr-*-2
+            dc.b    '.EDisk',$0
+InitMemMgr:
+            move.l  #$FFFFFF,Lo3Bytes
+            move.l  #$400,MinStack
+            move.l  #$2000,DefltStack
+            clr.w   MMDefFlags
+            rts
+InitRsrcMgr:
+            st      SysMap
+            clr.l   TopMapHndl
+            clr.w   -(SP)
+            _InitResources
+            addq.w  #2,SP
+            rts
+InitDTQueue:
+            lea     DtskQHdr_Flags,A1
+            jsp     InitQueue
+            lea     $90528A,A1
+            move.l  A1,$D9C
+            rts
+GoofyDoEject:
+.P1:        lea     (DoEject-.P1),A0
+            jmp     (.P1,PC,A0.l)
 TMVectors:
             dc.l    $2000                           ; Initial stack pointer
             dc.l    StartTest1                      ; Initial program counter
@@ -700,54 +956,80 @@ Trace:
             ori.w   #TECode,D7
             bra.w   ExceptionHandler
 LineA:
-
+            ori.w   #ATCode,D7
+            bra.w   ExceptionHandler
 LineF:
-
+            ori.w   #FTCode,D7
+            bra.w   ExceptionHandler
 Unassigned:
-
+            ori.w   #UNCode,D7
+            bra.w   ExceptionHandler
 CPProtocol:
-
+            ori.w   #CPCode,D7
+            bra.w   ExceptionHandler
 FormatX:
-
+            ori.w   #FMCode,D7
+            bra.w   ExceptionHandler
 SpurInterrupt:
-
+            ori.w   #SICode,D7
+            bra.w   ExceptionHandler
 TrapInst:
-
+            ori.w   #TNCode,D7
+            bra.b   ExceptionHandler
 IntLevel1:
-
+            ori.w   #L1Code,D7
+            bra.b   ExceptionHandler
 IntLevel2:
-
+            ori.w   #L2Code,D7
+            bra.b   ExceptionHandler
 IntLevel3:
-
+            ori.w   #L3Code,D7
+            bra.b   ExceptionHandler
 IntLevel4:
-
+            ori.w   #L4Code,D7
+            bset.l  #nmi,D7
+            bra.b   ExceptionHandler
 IntLevel5:
-
+            ori.w   #L5Code,D7
+            bset.l  #nmi,D7
+            bra.b   ExceptionHandler
 IntLevel6:
-
+            ori.w   #L6Code,D7
+            bset.l  #nmi,D7
+            bra.b   ExceptionHandler
 IntLevel7:
-
+            ori.w   #L7Code,D7
+            bset.l  #nmi,D7
+            bra.b   ExceptionHandler
 FPCP1:
-
+            ori.w   #F1Code,D7
+            bra.b   ExceptionHandler
 FPCP2:
-
+            ori.w   #F2Code,D7
+            bra.b   ExceptionHandler
 FPCP3:
-
+            ori.w   #F3Code,D7
+            bra.b   ExceptionHandler
 FPCP4:
-
+            ori.w   #F4Code,D7
+            bra.b   ExceptionHandler
 FPCP5:
-
+            ori.w   #F5Code,D7
+            bra.b   ExceptionHandler
 FPCP6:
-
+            ori.w   #F6Code,D7
+            bra.b   ExceptionHandler
 FPCP7:
-
+            ori.w   #F7Code,D7
+            bra.b   ExceptionHandler
 PMMUConfig:
-
+            ori.w   #PCCode,D7
+            bra.b   ExceptionHandler
 PMMUIllegal:
-
+            ori.w   #PICode,D7
+            bra.b   ExceptionHandler
 PMMUAccess:
-
-
+            ori.w   #PACode,D7
 ExceptionHandler:
             bset.l  #excp,D7                        ; Set exception flag
             move.l  SP,D6                           ; Save stack pointer
@@ -790,7 +1072,7 @@ PowerManagerInit:
             move.w  #ErrPmgrTurnOn,D7
             lea     .L1,A6
             move.w  #powerCntl*$100+1,D0
-            move.l  #(1<<pTurnOn)*$1000000,D1
+            move.l  #(1<<pTurnOn)*$100000,D1
             jpp     QuasiPwrMgr
 .L1:
             move.w  A0,D6
@@ -1472,7 +1754,7 @@ TMEntry1:
 .L1:
             lea     .checkForASC,A6
             move.w  #powerCntl*$100+1,D0
-            move.l  #(1<<pTurnOn)*$1000000,D1
+            move.l  #(1<<pTurnOn)*$100000,D1
             jpp     QuasiPwrMgr
 .checkForASC:
             btst.l  #test,D7
@@ -2014,7 +2296,7 @@ TMRestart_Continue:
             bclr.l  #aski,D7
             lea     .b1MsgLength,A1
             clr.w   D4
-            move.b  (A1)+,D0
+            move.b  (A1)+,D4
 .L6:
             move.b  (A1)+,D0
             lea     .L7,A6
@@ -2089,8 +2371,89 @@ GetChar:
 ; Outputs:  D0.b    Converted nibble
 CvtAscii:
             andi.w  #$7F,D0
-
-
+            subi.b  #$30,D0
+            bmi.b   .L2
+            cmpi.b  #$16,D0
+            bgt.b   .L2
+            cmpi.b  #$9,D0
+            ble.b   .L1
+            subq.b  #$7,D0
+.L1:
+            jmp     (A6)
+.L2:
+            clr.w   D0
+            jmp     (A6)
+GetNBytes:
+            movea.l A6,A5
+            moveq   #0,D1
+            btst.l  #aski,D7
+            beq.b   .adjust
+            asl.w   #1,D2
+.adjust:
+            subq.w  #1,D2
+.L1:
+            BSR6    GetChar
+            tst.w   D5
+            bmi.b   .L1
+            move.b  D5,D0
+            btst.l  #aski,D7
+            beq.b   .L2
+            BSR6    CvtAscii
+            lsl.l   #4,D1
+            or.b    D0,D1
+            bra.b   .L3
+.L2:
+            lsl.l   #8,D1
+            move.b  D0,D1
+.L3:
+            dbf     D2,.L1
+            jmp     (A5)
+PutNBytes:
+            movea.l A6,A5
+            move.l  D0,D3
+            tst.w   D2
+            beq.b   .L6
+            move.w  D2,D1
+            moveq   #4,D0
+            sub.w   D1,D0
+            mulu.w  #8,D0
+            rol.l   D0,D3
+            moveq   #0,D0
+            btst.l  #aski,D7
+            beq.b   .L1
+            asl.w   #1,D2
+.L1:
+            subq.w  #1,D2
+.L2:
+            btst.l  #aski,D7
+            bne.b   .L3
+            rol.l   #8,D3
+            move.b  D3,D0
+            bra.b   .L5
+.L3:
+            rol.l   #4,D3
+            move.b  D3,D0
+            andi.b  #$F,D0
+            cmpi.b  #$A,D0
+            blt.b   .L4
+            addq.b  #7,D0
+.L4:
+            addi.b  #$30,D0
+.L5:
+            BSR6    SendString
+            dbf     D2,.L2
+.L6:
+            btst.l  #crlf,D7
+            beq.b   .Exit
+            move.b  #$D,D0
+            BSR6    SendString
+            move.b  #$A,D0
+            BSR6    SendString
+.Exit:
+            jmp     (A5)
+SendString:
+            lea     SCCWBase,A2
+            
 
 
 
