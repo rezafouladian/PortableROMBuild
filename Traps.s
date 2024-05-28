@@ -105,3 +105,37 @@
     macro _GetResource
         dc.w    $A9A0
     endm
+
+    macro _InternalWait
+        dc.w    $A07F
+    endm
+
+    macro _GetWaitFlags
+        movea.w #2,A0
+        _InternalWait
+    endm
+
+    macro _SetWaitFlags
+        movea.w #3,A0
+        _InternalWait
+    endm
+
+    macro _DisableDynWait
+        movea.w #4,A0
+        _InternalWait
+    endm
+
+    macro _EnableDynWait
+        movea.w $5,A0
+        _InternalWait
+    endm
+
+    macro _DisablePermWait
+        movea.w #6,A0
+        _InternalWait
+    endm
+
+    macro _EnablePermWait
+        movea.w #7,A0
+        _InternalWait
+    endm
