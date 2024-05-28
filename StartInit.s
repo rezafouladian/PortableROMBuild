@@ -42,6 +42,11 @@ PortableAbs EQU     0
             .\@:
             endm
 
+            macro BigJsr
+                lea (\1-*).l,\2
+                jsr (*-6,PC,\2.l)
+            endm
+
             org     BaseOfROM
 Checksum    dc.l    $96CA3846
 StartPC     dc.l    ResetEntry
@@ -114,9 +119,7 @@ StartInit1:
             swap    D7
             move.b  D7,WhichBox
             move.l  A6,MemTop                       ; Save the top of available memory
-            lea     .L2,A6
-            jpp     SysErrInit
-.L2:
+            BSR6    SysErrInit
             bsr.w   SetUpTimeK                      ; Initialize TimeDBRA and TimeSCCDB
             bsr.w   VIATimerEnables
             clr.b   MMUType
@@ -132,8 +135,7 @@ BootRetry:
             movea.l VIA,A1
             move.b  #$4,(VIA_IER-VIA_Base,A1)
             bsr.w   InitGlobalVars                  ; Initialize a bunch of global variables
-.P0         lea     (InitIntHandler-.P0).l,A0
-            jsr     (.P0,PC,A0.l)                   ; Intialize interrupt vectors and dispatch table
+            BigJsr  InitIntHandler,A0
             bsr.w   InitDispatcher
             bsr.w   GetPRAM
             bsr.w   InitMemMgr
@@ -141,10 +143,8 @@ BootRetry:
             bsr.w   InitSwitcherTable
             bsr.w   InitPMgrVars
             bsr.w   InitRsrcMgr
-.P1         lea     (NMInit-.P1).l,A0
-            jsr     (.P1,PC,A0.l)
-.P2         lea     (InitTimeMgr-.P2).l,A0
-            jsr     (.P2,PC,A0.l)
+            BigJsr  NMInit,A0
+            BigJsr  InitTimeMgr,A0
             bsr.w   InitADBvars
             bsr.w   InitShutdownMgr
             bsr.w   InitDTQueue
@@ -156,11 +156,9 @@ BootRetry:
             _SetApplLimit                           ; Don't let the system heap crash our stack
             lea     ($308).w,A1
             jsp     InitQueue
-.P3         lea     (InitSCSIMgr-.P3).l,A0
-            jsr     (.P3,PC,A0.l)
+            BigJsr  InitSCSIMgr,A0
             bsr.w   InitIOMgr
-.P4         lea     (InitADB-.P4).l,A0
-            jsr     (.P4,PC,A0.l)
+            BigJsr  InitADB,A0
             bsr.w   InitCrsrMgr
             moveq   #$70,D0                         
             _NewPtrSysClear
@@ -308,9 +306,6 @@ DrawBeepScreen:
             pea     (-$18,A2)
             _FillRoundRect
             rts
-            IF PortableAbs
-            org     $90031C
-            ENDIF
 InitShutdownMgr:
             clr.w   -(SP)
             _Shutdown
@@ -419,8 +414,7 @@ InitGlobalVars:
             bsr.w   InitSCSIGlobals
             clr.l   DSAlertTab
             move.w  MinusOne,FSFCBLen               ; Mark that FS needs (re)initialization
-.P1         lea     (FSIODNETbl-.P1).l,A0           ; Point to the offset table
-            lea     (.P1,PC,A0.l),A0
+            BigLea  FSIODNETbl,A0                   ; Point to the offset table
             lea     JFetch,A1                       ; Point to first jump table entry
             moveq   #2,D1                           ; There are 3 vectors
             bsr.w   JmpTblInit
