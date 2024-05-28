@@ -32,7 +32,7 @@ PortableAbs EQU     0
             endm
 
             macro BigLea
-                lea (\1-*),\2
+                lea (\1-*).l,\2
                 lea (*-6,PC,\2.l),\2
             endm
 
