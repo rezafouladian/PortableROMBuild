@@ -2522,7 +2522,7 @@ StoreResults:
 Unknown_function_none:
             jmp     (A6)
 WrXByte:
-            movea.l A6,A3
+            movea.l A6,A3                           ; Save the return address
             move.w  #xPramWrite*$100+3,D0
             andi.w  #$7F,D1
             lsl.l   #8,D1
@@ -2797,23 +2797,23 @@ Mod3Test:
             moveq   #8,D4
             cmpa.l  A2,A1
             beq.b   .FillDone
-            move.l  D1,(A2)+
-            moveq   #0,D4
+            move.l  D1,(A2)+                        ; Write one more long
+            moveq   #0,D4                           ; Case 2, offset 0
 .FillDone:
-            movea.l A0,A2
+            movea.l A0,A2                           ; Copy starting address
             move.l  A1,D3
             sub.l   A0,D3
             subq.l  #4,D3
             moveq   #$3F,D2
             and.w   D3,D2
-            neg.w   D2
-            lsr.l   #6,D3
-            eor.l   D1,(A2)
-            addi.l  #$FFFFFFFF,D5
-            jmp     (.L2,PC,D2.w)
+            neg.w   D2                              ; Index backwards
+            lsr.l   #6,D3                           ; 64 bytes per loop
+            eor.l   D1,(A2)                         ; Write starting pattern
+            addi.l  #$FFFFFFFF,D5                   ; Help any floating bits float up
+            jmp     (.L2,PC,D2.w)                   ; Jump to the correct starting position
 .L1:
-            move.l  (A2)+,D2
-            eor.l   D2,(A2)
+            move.l  (A2)+,D2                        ; Read a pattern
+            eor.l   D2,(A2)                         ; Generate next pattern
             move.l  (A2)+,D2
             eor.l   D2,(A2)
             move.l  (A2)+,D2
