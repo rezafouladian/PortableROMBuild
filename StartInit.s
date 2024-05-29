@@ -1064,16 +1064,16 @@ VIASetup:
 PowerManagerInit:
             move.w  #ErrPmgrTurnOn,D7
             lea     .L1,A6
-            move.w  #powerCntl*$100+1,D0
-            move.l  #(1<<pTurnOn)*$100000,D1
+            move.w  #(powerCntl<<8|1<<0),D0
+            move.l  #(1<<pTurnOn)<<24,D1
             jpp     QuasiPwrMgr
 .L1:
             move.w  A0,D6
             tst.l   D6
             bne.w   Error1Handler
             lea     .L2,A6
-            move.w  #powerCntl*$100+1,D0
-            move.l  #(1<<pTurnOn|1<<pMinus5V|1<<pSerDrvr|1<<pSCC|1<<pIWM)*$1000000,D1
+            move.w  #(powerCntl<<8|1<<0),D0
+            move.l  #(1<<pTurnOn|1<<pMinus5V|1<<pSerDrvr|1<<pSCC|1<<pIWM)<<24,D1
             jpp     QuasiPwrMgr
 .L2:
             move.w  A0,D6
@@ -1087,7 +1087,7 @@ PowerManagerInit:
             bne.w   Error1Handler
             clr.w   D7
             move.w  #ErrPmgrSt,D7
-            move.w  #PmgrSelfTest*$100+0,D0
+            move.w  #(PmgrSelfTest<<8|0<<0),D0
             lea     .L4,A6
             jpp     QuasiPwrMgr
 .L4:
@@ -1110,7 +1110,7 @@ PowerManagerInit:
             tst.l   D6
             bne.w   Error1Handler
             lea     Sound_Base,SP
-            move.w  #readINT*$100+0,D0
+            move.w  #(readINT<<8|0<<0),D0
             lea     .L7,A6
             jpp     QuasiPwrMgr
 .L7:
@@ -1137,7 +1137,7 @@ PowerManagerInit:
             move.l  #$22BBF0E1,D0
             jpp     SizeMemory
 .L10:
-            move.w  #xPramRead*$100+2,D0
+            move.w  #(xPramRead<<8|2<<0),D0
             move.l  #$46010000,D1
             lea     .L11,A6
             jpp     QuasiPwrMgr
@@ -1234,7 +1234,7 @@ PowerManagerInit:
             bne.w   Error1Handler
             btst.l  #test,D7
             bne.w   PostProc
-            move.w  #xPramRead*$100+2,D0
+            move.w  #(xPramRead<<8|2<<0),D0
             move.l  #$46010000,D1
             lea     .L29,A6
             jpp     QuasiPwrMgr
@@ -1308,8 +1308,8 @@ Error1Handler:
             move.b  #%10111001,(VIA_DDR_B-VIA_Base,A1)
             bclr.b  #SyncM,(VIA_BufB-VIA_Base,A1)
             lea     .L1,A6
-            move.w  #powerCntl*$100+1,D0
-            move.l  #(1<<pTurnOn|1<<pMinus5V|1<<pASC|1<<pSerDrvr|1<<pHD|1<<pSCC|1<<pIWM)*$1000000,D1
+            move.w  #(powerCntl<<8|1<<0),D0
+            move.l  #(1<<pTurnOn|1<<pMinus5V|1<<pASC|1<<pSerDrvr|1<<pHD|1<<pSCC|1<<pIWM)<<24,D1
             jpp     QuasiPwrMgr
 .L1:
             btst.l  #test,D7
@@ -1740,14 +1740,14 @@ TMEntry0:
             moveq   #0,D6
             moveq   #0,D7
 TMEntry1:
-            move.w  #powerCntl*$100+1,D0
-            move.l  #(1<<pTurnOn|1<<pMinus5V|1<<pASC|1<<pSerDrvr|1<<pHD|1<<pSCC|1<<pIWM)*$1000000,D1
+            move.w  #(powerCntl<<8|1<<0),D0
+            move.l  #(1<<pTurnOn|1<<pMinus5V|1<<pASC|1<<pSerDrvr|1<<pHD|1<<pSCC|1<<pIWM)<<24,D1
             lea     .L1,A6
             jpp     QuasiPwrMgr
 .L1:
             lea     .checkForASC,A6
-            move.w  #powerCntl*$100+1,D0
-            move.l  #(1<<pTurnOn)*$100000,D1
+            move.w  #(powerCntl<<8|1<<0),D0
+            move.l  #(1<<pTurnOn)<<24,D1
             jpp     QuasiPwrMgr
 .checkForASC:
             btst.l  #test,D7
@@ -1773,7 +1773,7 @@ getCmd:
             bpl.b   .gotChar
             btst.l  #nosleep,D7
             bne.w   TMRestart_Continue
-            move.w  #batteryRead*$100+0,D0
+            move.w  #(batteryRead<<8|0<<0),D0
             lea     .L2,A6
             jpp     QuasiPwrMgr
 .L2:
@@ -1784,7 +1784,7 @@ getCmd:
             swap    D4
 .L4:
             dbf     D4,.L4
-            move.w  #batteryRead*$100+0,D0
+            move.w  #(batteryRead<<8|0<<0),D0
             lea     .L5,A6
             jpp     QuasiPwrMgr
 .L5:
@@ -1792,7 +1792,7 @@ getCmd:
             bne.w   TMRestart_Continue
             swap    D4
             dbf     D4,.L3
-            move.w  #sleepReq*$100+4,D0
+            move.w  #(sleepReq<<8|4<<0),D0
             move.l  #sleepSig,D1
             lea     TMRestart_Continue,A6
             jpp     QuasiPwrMgr
