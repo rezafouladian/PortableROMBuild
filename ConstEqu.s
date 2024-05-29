@@ -13,6 +13,7 @@ sleepSig        EQU         'MATT'
 
 powerCntl       EQU         $10
 pMgrADBoff      EQU         $21                     ; Turn ADB auto-poll off
+xPramWrite      EQU         $32
 timeRead        EQU         $38                     ; Read the time from the clock chip
 xPramRead       EQU         $3A                     ; Read extended PRAM
 batteryRead     EQU         $68

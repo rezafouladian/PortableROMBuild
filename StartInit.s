@@ -436,8 +436,7 @@ InitGlobalVars:
             jsp     InitCrsrVars
             clr.w   SysVersion
             bclr.b  #0,AlarmState
-.P2         lea     (NMGNEFilter-.P2),A0
-            lea     (.P2,PC,A0.l),A0
+            BigLea  NMGNEFilter,A0
             move.l  A0,GNEFilter
             clr.l   IAZNotify                       ; No InitApplZone notify proc
             move.w  #$FF7F,FlEvtMask                ; Init for disable of DIP flushes
@@ -2447,14 +2446,116 @@ PutNBytes:
             jmp     (A5)
 SendString:
             lea     SCCWBase,A2
-            
-
-
-
-
-            IF PortableAbs
-            org     $901B28
-            ENDIF
+            move.b  #$30,(SCCW_aCtl-SCCWBase,A2)
+            move.b  D0,(SCCW_aData-SCCWBase,A2)
+.L1:
+            lea     SCCWBase,A2
+            move.w  #1,D0
+            move.b  D0,(SCCW_aCtl-SCCWBase,A2)
+            lea     SCCRBase,A2
+            btst.b  #0,(SCCR_aCtl-SCCRBase,A2)
+            beq.b   .L1
+            jmp     (A6)
+SetupBases:
+            lea     VIA_Base,A0
+            btst.b  #TestJumper,(VIA_BufB-VIA_Base,A0)
+            beq.b   .L1
+            bset.b  #TestJumper,(VIA_DDR_B-VIA_Base,A0)
+            bclr.b  #TestJumper,(VIA_BufB-VIA_Base,A0)
+.L1:
+            lea     SCCWBase,A0
+            tst.b   (SCCW_bCtl-SCCWBase,A0)
+            lea     PortSetUp,A1
+.L2:        move.b  (A1)+,D0
+            bmi.b   .Done
+            move.b  D0,(SCCW_aCtl-SCCWBase,A0)
+            move.b  (A1)+,(SCCW_aCtl-SCCWBase,A0)
+            bra.b   .L2
+.Done:
+            bset.l  #SCCok,D7
+            lea     SCCRBase,A0
+            move.b  (SCCR_aData-SCCRBase,A0),D0
+            lea     VIA_Base,A1
+            move.b  #$3D,(VIA_DDR_B-VIA_Base,A1)
+            bset.b  #SyncM,(VIA_BufB-VIA_Base,A1)
+            jmp     (A6)
+PortSetUp:
+            dc.b    $9,$C0
+            dc.b    $F,$0
+            dc.b    $4,$4C
+            dc.b    $B,$50
+            dc.b    $E,$0
+            dc.b    $C,$A
+            dc.b    $D,$0
+            dc.b    $E,$1
+            dc.b    $A,$0
+            dc.b    $3,$C1
+            dc.b    $5,$EA
+            dc.b    $1,$0
+            dc.b    $FF,$FF
+StartTimer:
+            lea     VIA_Base,A2
+            clr.b   (VIA_ACR-VIA_Base,A2)
+            move.b  #$20,(VIA_IER-VIA_Base,A2)
+            move.b  #$FF,(VIA_T2_L-VIA_Base,A2)
+            move.b  #$FF,(VIA_T2_H-VIA_Base,A2)
+            jmp     (A6)
+TMRestart_SubVIA:
+            bclr.l  #$F,D0
+            lea     VIA_Base,A2
+            btst.b  #5,(VIA_IFR-VIA_Base,A2)
+            beq.b   .Exit
+            move.b  #$20,(VIA_IER-VIA_Base,A2)
+            move.b  #$FF,(VIA_T2_L-VIA_Base,A2)
+            move.b  #$FF,(VIA_T2_H-VIA_Base,A2)
+            swap    D4
+            subq.w  #1,D4
+            bpl.b   .L1
+            move.w  D0,D4
+            bset.l  #$F,D0
+.L1:
+            swap    D4
+.Exit:
+            jmp     (A6)
+StoreResults:
+            jmp     (A6)
+Unknown_function_none:
+            jmp     (A6)
+WrXByte:
+            movea.l A6,A3
+            move.w  #xPramWrite*$100+3,D0
+            andi.w  #$7F,D1
+            lsl.l   #8,D1
+            move.b  #1,D1
+            lsl.l   #8,D1
+            move.b  D2,D1
+            lsl.l   #8,D1
+            BSR6    QuasiPwrMgr
+            jmp     (A3)
+RdXByte:
+            movea.l A6,A3                           ; Save the return address
+            move.w  #xPramRead*$100+2,D0
+            andi.w  #$7F,D1
+            lsl.l   #8,D1
+            move.b  #1,D1
+            lsl.l   #8,D1
+            lsl.l   #8,D1
+            BSR6    QuasiPwrMgr
+            moveq   #$18,D0
+            lsr.l   D0,D1
+            jmp     (A3)
+Unknown_function:
+            movea.l A6,A5
+            moveq   #$35,D1
+            moveq   #$55,D2
+            lea     VIA_Base,A0
+            bclr.b  #TestJumper,(VIA_BufB-VIA_Base,A0)
+            BSR6    Unknown_function_none
+            move.w  D2,D1
+            BSR6    Unknown_function_none
+            lea     VIA_Base,A0
+            bset.b  #TestJumper,(VIA_BufB-VIA_Base,A0)
+            jmp     (A5)
 ; QuasiPwrMgr
 ; 
 ; Inputs:   D0.w    Command byte and number of bytes
@@ -2651,7 +2752,7 @@ StartUpROMTest:
             moveq   #0,D1
             lea     BaseOfROM,A0
             move.l  (A0)+,D4                        ; Load expected checksum
-            move.l  #ROMSize/2-4,D3
+            move.l  #ROMSize/2-2,D3
 .Loop:
             move.w  (A0)+,D0                        ; Fetch a ROM word
             add.l   D0,D1                           ; Add to checksum
@@ -2665,9 +2766,112 @@ StartUpROMTest:
 .End:
             jmp     (A6)
 Mod3Test:
-
-
-
-
-
-
+            movem.l .Mod3Pat,D0-D5
+            movea.l A0,A2
+            suba.w  #120,A1
+            bra.b   .Fill120Start
+.Fill120Loop:
+            movem.l D0-D5,(A2)
+            movem.l D0-D5,($18,A2)
+            movem.l D0-D5,($30,A2)
+            movem.l D0-D5,($48,A2)
+            movem.l D0-D5,($60,A2)
+            adda.w  #120,A2
+.Fill120Start:
+            cmpa.l  A1,A2
+            ble.b   .Fill120Loop
+            suba.w  #$FF94,A1
+            moveq   #12,D5
+            bra.b   .Fill12Start
+.Fill12Loop:
+            movem.l D0-D2,(A2)
+            adda.w  D5,A2
+.Fill12Start:
+            cmpa.l  A1,A2
+            ble.b   .Fill12Loop
+            adda.w  D5,A1
+            moveq   #4,D4
+            cmpa.l  A2,A1
+            beq.b   .FillDone
+            move.l  D0,(A2)+
+            moveq   #8,D4
+            cmpa.l  A2,A1
+            beq.b   .FillDone
+            move.l  D1,(A2)+
+            moveq   #0,D4
+.FillDone:
+            movea.l A0,A2
+            move.l  A1,D3
+            sub.l   A0,D3
+            subq.l  #4,D3
+            moveq   #$3F,D2
+            and.w   D3,D2
+            neg.w   D2
+            lsr.l   #6,D3
+            eor.l   D1,(A2)
+            addi.l  #$FFFFFFFF,D5
+            jmp     (.L2,PC,D2.w)
+.L1:
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+            move.l  (A2)+,D2
+            eor.l   D2,(A2)
+.L2:
+            dbf     D3,.L1
+            subi.l  #$10000,D3
+            bpl.b   .L1
+            cmp.l   D0,D1
+            beq.b   .L3
+            move.l  D0,D1
+            bra.b   .FillDone
+.L3:
+            movem.l (-$C,A1),D0-D2
+            movem.l (.Exit,PC,D4.w),D3-D5
+            eor.l   D3,D0
+            eor.l   D4,D1
+            eor.l   D5,D2
+            or.l    D2,D0
+            or.l    D1,D0
+            or.l    D0,D6
+            swap    D0
+            or.w    D0,D6
+            andi.l  #$FFFF,D6
+.Exit:
+            jmp     (A6)
+.Mod3Pat:
+            dc.l    $6DB6DB6D
+            dc.l    $B6DB6DB6
+            dc.l    $DB6DB6DB
+            dc.l    $6DB6DB6D
+            dc.l    $B6DB6DB6
+            dc.l    $DB6DB6DB
+RevMod3Test:
+            

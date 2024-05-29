@@ -126,6 +126,7 @@ SCCR_bCtl       EQU         SCCRBase+0
 SCCW_aCtl       EQU         SCCWBase+2
 SCCW_bCtl       EQU         SCCWBase+0
 SCCR_aData      EQU         SCCRBase+6
+SCCW_aData      EQU         SCCWBase+6
 
 
 DBase           EQU         $F6E1FF

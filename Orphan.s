@@ -91,13 +91,6 @@ NMGNEFilter:
             org     $90651E
 FSIODNETbl:
 
-
-            org     $9019F8
-SetupBases:
-    
-            org     $901A80
-TMRestart_SubVIA:
-
             org     $904AA8
 ErrorBeep1:
             lea     $904BDC,A4
@@ -112,14 +105,6 @@ ErrorBeep4:
             lea     $904C28,A4
 DoBeep:
 
-            org     $901AB4
-StoreResults:
-
-            org     $901AB8
-WrXByte:
-
-            org     $901A62
-StartTimer:
 
             org     $9025C2
 TestSCSI:
@@ -138,9 +123,6 @@ ExtRAMTest:
 
             org     $9027DE
 PRAMTest:
-
-            org     $901E2E
-RevMod3Test:
 
             org     $901F22
 RomTest:
@@ -174,9 +156,6 @@ VramAddrTest:
 
             org     $9020E2
 VramDataTest:
-
-            org     $901AD8
-RdXByte:
 
 
             org     $9269CC
