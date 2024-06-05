@@ -1393,9 +1393,6 @@ NCErrorHandler:
             blt.b   .L5
             moveq   #0,D6
             jmp     (A4)
-            IF PortableAbs
-            org     $900FB0
-            ENDIF
 TestManager:
             movem.l A6-A0/D5-D0,-(SP)
             move    SR,-(SP)
@@ -1405,9 +1402,6 @@ TestManager:
             subq.w  #1,D0
             beq.w   .Exit
             subq.w  #1,D0
-            IF PortableAbs
-            org     $900FC6
-            ENDIF
             beq.w   .cmd2
             subq.w  #1,D0
             beq.w   TMEntry0
