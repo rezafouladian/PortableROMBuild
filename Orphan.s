@@ -109,30 +109,16 @@ DoBeep:
             org     $9025C2
 TestSCSI:
 
-            org     $90215A
-MapRamUniqTest:
 
-            org     $90210E
-MapRamDataTest:
-
-            org     $902064
-NoTest:
 
             org     $9027DE
 PRAMTest:
-
-
-            org     $901FEE
-AddrLineTest:
 
             org     $9026A6
 TestASC:
 
             org     $902444
 ViaTest:
-
-            org     $90229A
-SccLoopTest:
 
             org     $90235A
 SccTimerTest:
@@ -145,12 +131,6 @@ SccRegTest:
 
             org     $903EA6
 SizeMemory:
-
-            org     $902068
-VramAddrTest:
-
-            org     $9020E2
-VramDataTest:
 
 
             org     $9269CC

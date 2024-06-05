@@ -104,6 +104,7 @@ DefltStack      EQU         $322
 MMDefFlags      EQU         $326
 SysMap          EQU         $A58
 TopMapHndl      EQU         $A50
+ResetStackPtr   EQU         $0
 
 
 
@@ -156,3 +157,5 @@ Video_Base      EQU         $FA8000
 Sound_Base      EQU         $FB0000
 ascMode         EQU         $FB0801
 ascFifoInt      EQU         $FB0804
+
+MapperBase      EQU         $FC0000

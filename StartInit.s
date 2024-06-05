@@ -2893,7 +2893,7 @@ ExtRAMTest:
             moveq   #0,D0
             moveq   #-1,D1
             movea.l A0,A2
-            move.l  A1,A2
+            move.l  A1,D2
             sub.l   A0,D2
             lsr.l   #2,D2
             move.l  D2,D3
@@ -2919,6 +2919,7 @@ ExtRAMTest:
 .L4:
             tst.l   (A2)
             bne.b   .L7
+            eor.l   D1,(A2)+
             subq.l  #1,D2
             bne.b   .L4
             move.l  D3,D2
@@ -2940,4 +2941,380 @@ ExtRAMTest:
             swap    D0
             or.w    D0,D6
             andi.l  #$FFFF,D6
+            jmp     (A6)                            ; Return
+AddrLineTest:
+            move.l  A0,D0
+            lea     $80000,A2
+            cmpi.l  #$100000,D0
+            ble.b   .L1
+            lea     $200000,A2
+.L1:
+            cmpa.l  A2,A0
+            bgt.b   .L2
+            move.l  A2,D0
+            lsr.l   #1,D0
+            movea.l D0,A2
+.L2:
+            clr.l   ResetStackPtr
+            moveq   #4,D5
+.L3:
+            movea.l D5,A3
+            move.l  D5,(A3)
+            lsl.l   #1,D5
+            cmp.l   A2,D5
+            ble.b   .L3
+            suba.l  A3,A3
+            move.l  (A3),D0
+            bne.b   .Exit
+            moveq   #4,D5
+.L4:
+            movea.l D5,A3
+            move.l  (A3),D0
+            eor.l   D5,D0
+            bne.b   .Exit
+            lsl.l   #1,D5
+            cmp.l   A2,D5
+            ble.b   .L4
+            move.l  A2,D5
+            lsl.l   #1,D5
+.L5:
+            lsr.l   #1,D5
+            cmpi.l  #4,D5
+            blt.b   .L6
+            movea.l D5,A3
+            move.l  D5,(A3)
+            bra.b   .L5
+.L6:
+            suba.l  A3,A3
+            move.l  (A3),D0
+            bne.b   .Exit
+            moveq   #4,D5
+.L7:
+            movea.l D5,A3
+            move.l  (A3),D0
+            eor.l   D5,D0
+            bne.b   .Exit
+            lsl.l   #1,D5
+            cmp.l   A2,D5
+            ble.b   .L7
+            moveq   #0,D0
+.Exit:
+            move.l  D0,D6
             jmp     (A6)
+NoTest:
+            moveq   #0,D6
+            jmp     (A6)
+VramAddrTest:
+            moveq   #0,D0
+            lea     Video_Base,A0
+            move.w  #$4000,D0
+            moveq   #$1E,D1
+            move.w  #$E0,D2
+.wloop:
+            move.b  D1,(A0,D0.w)
+            eori.w  #$7FFF,D0
+            move.b  D2,(A0,D0.w)
+            subq.b  #1,D1
+            ror.w   #4,D2
+            subq.b  #1,D2
+            rol.w   #4,D2
+            eori.w  #$7FFF,D0
+            lsr.w   #1,D0
+            bne.b   .wloop
+            move.w  #$4000,D0
+            moveq   #$1E,D1
+            move.w  #$E0,D2
+.rdloop:
+            move.b  (A0,D0.w),D3
+            cmp.b   D1,D3
+            bne.b   .failones
+            eori.w  #$7FFF,D0
+            move.b  (A0,D0.w),D3
+            cmp.b   D2,D3
+            bne.b   .failzeroes
+            subq.b  #1,D1
+            ror.w   #4,D2
+            subq.b  #1,D2
+            rol.w   #4,D2
+            eori.w  #$7FFF,D0
+            lsr.w   #1,D0
+            bne.b   .rdloop
+            bra.b   .done
+.failones:
+            move.w  D0,D6
+            moveq   #$10,D2
+            asl.l   D2,D6
+            move.b  D1,D6
+            asl.w   #8,D6
+            move.b  D3,D6
+            bra.b   .done
+.failzeroes:
+            move.w  D0,D6
+            moveq   #$10,D1
+            asl.l   D1,D6
+            move.b  D2,D6
+            asl.w   #8,D6
+            move.b  D3,D6
+.done:
+            jmp     (A6)
+VramDataTest:
+            movea.l A6,A3
+            lea     Video_Base,A0
+            lea     Sound_Base,A1
+            BSR6    Mod3Test
+            tst.l   D6
+            bne.b   .vidramfail
+            BSR6    RevMod3Test
+.vidramfail:
+            move.l  D6,D0
+            asr.w   #8,D0
+            or.b    D0,D6
+            movea.l A3,A6
+            jmp     (A6)
+MapRamDataTest:
+            lea     MapperBase,A0
+            lea     MapTestTable,A1
+            move.w  MapTestTableSize,D0
+.mwlp2:
+            moveq   #1,D1
+            move.b  (A1,D0.w),D2
+.mwlp1:
+            move.b  D2,(A0,D1.w)
+            addq.l  #2,D1
+            cmpi.b  #$1F,D1
+            ble.b   .mwlp1
+            moveq   #1,D1
+.mrdlp1:
+            move.b  (A0,D1.w),D3
+            andi.b  #%111,D3
+            cmp.b   D2,D3
+            bne.b   .failmapram
+            addq.l  #2,D1
+            cmpi.b  #$1F,D1
+            ble.b   .mrdlp1
+            dbf     D0,.mwlp2
+            bra.b   .Exit
+.failmapram:
+            move.b  #$10,D0
+            move.b  D1,D6
+            asl.l   D0,D6
+            move.b  D2,D6
+            asl.w   #8,D6
+            move.b  D3,D6
+.Exit:
+            jmp     (A6)                            ; Return
+MapRamUniqTest:
+            lea     MapperBase,A0
+            lea     MapTestTable2,A1
+            movea.l A1,A2
+            moveq   #1,D1
+.wlpf:
+            move.b  (A1)+,(A0,D1.w)
+            addq.l  #2,D1
+            cmpi.b  #$1F,D1
+            ble.b   .wlpf
+            lea     .L1,A3
+            bra.b   .rdfwd1
+.L1:
+            tst.l   D6
+            bne.b   .Exit
+            lea     Restore,A1
+            moveq   #$1F,D1
+.L2:
+            move.b  -(A1),(A0,D1.w)
+            subq.l  #2,D1
+            bpl.b   .L2
+            lea     .Exit,A3
+            bra.b   .rdfwd1
+.Exit:
+            jmp     (A6)
+.rdfwd1:
+            moveq   #1,D1
+            movea.l A2,A1
+.rdfwd2:
+            move.b  (A0,D1.w),D3
+            andi.b  #7,D3
+            cmp.b   (A1)+,D3
+            bne.b   .failrd
+            addq.l  #$2,D1
+            cmpi.b  #$1F,D1
+            ble.b   .rdfwd2
+            bra.b   .passrd
+.failrd:
+            move.b  #$10,D0
+            move.b  D1,D6
+            asl.l   D0,D6
+            move.b  -(A1),D6
+            asl.w   #8,D6
+            move.b  D3,D6
+.passrd:
+            jmp     (A3)
+MapTestTable:
+            dc.b    %111
+            dc.b    %000
+            dc.b    %001
+            dc.b    %010
+            dc.b    %100
+            dc.b    %110
+            dc.b    %101
+            dc.b    %011
+MapTestTableSize:
+            dc.w    *-MapTestTable-1
+MapTestTable2:
+            dc.b    0
+            dc.b    1
+            dc.b    2
+            dc.b    3
+            dc.b    4
+            dc.b    5
+            dc.b    6
+            dc.b    7
+            dc.b    7
+            dc.b    6
+            dc.b    5
+            dc.b    4
+            dc.b    3
+            dc.b    2
+            dc.b    1
+            dc.b    0
+Restore:
+            movea.l #VIA_Base,A0
+            bset.b  #SyncM,(VIA_Base-VIA_Base,A0)
+            bset.b  #SyncM,(VIA_DDR_B-VIA_Base,A0)
+            movea.l #SCCWBase,A0
+            movea.l #SCCRBase,A1
+            addq.w  #2,A0
+            addq.w  #2,A1
+            lea     ResetTbl,A2
+            bsr.b   writescc2
+            rts
+            bsr.b   Restore
+            lea     DefaultTbl,A2
+            bsr.b   writescc2
+            subq.w  #2,A0
+            subq.w  #2,A1
+            lea     DefaultTbl,A2
+            bsr.b   writescc2
+            rts
+writescc2:
+            move.w  (A2)+,D0
+            move.b  (A1),D2
+.loop:
+            move.w  (SP),(SP)
+            move.b  (A2)+,(A0)
+            dbf     D0,.loop
+            rts        
+scclp:
+            move.w  $1A00,D0
+.L1:
+            dbf     D0,.L1
+            tst.b   ($4,A1)
+            move.w  #$FE,D1
+.L2:
+            moveq   #-1,D3
+            moveq   #0,D6
+            move.b  #$30,(A0)
+            move.b  (SP),(SP)
+.L3:
+            btst.b  #2,(A1)
+            bne.b   .L4
+            dbf     D3,.L3
+            moveq   #1,D6
+            bra.b   .Exit
+.L4:
+            move.b  D1,($4,A0)
+            moveq   #-1,D3
+.L5:
+            move.b  #1,(A0)
+            move.w  (SP),(SP)
+            btst.b  #0,(A1)
+            bne.b   .L6
+            dbf     D3,.L5
+            moveq   #2,D6
+            bra.b   .Exit
+.L6:
+            move.w  #-1,D3
+.L7:
+            btst.b  #0,(A1)
+            bne.b   .L8
+            dbf     D3,.L7
+            moveq   #3,D6
+            bra.b   .Exit
+.L8:
+            move.b  ($4,A1),D2
+            cmp.b   D1,D2
+            beq.b   .L9
+            moveq   #4,D6
+            bra.b   .Exit
+.L9:
+            move.b  #1,(A0)
+            move.w  (SP),(SP)
+            move.b  (A1),D2
+            andi.b  #$70,D2
+            beq.b   .L10
+            moveq   #5,D6
+            bra.b   .Exit
+.L10:
+            dbf     D1,.L2
+.Exit:
+            rts
+SccLoopTest:
+            move    SR,-(SP)
+            move    #$2700,SR
+            bsr.w   Restore
+            lea     MainTbl,A2
+            bsr.w   writescc2
+            lea     LoopTbl,A2
+            bsr.w   writescc2
+            bsr.w   scclp
+            bne.b   .Exit
+            bsr.w   Restore
+            subq.w  #2,A1
+            subq.w  #2,A0
+            lea     MainTbl,A2
+            bsr.w   writescc2
+            lea     LoopTbl,A2
+            bsr.w   writescc2
+            bsr.w   scclp
+            beq.b   .Exit
+            addi.w  #$10,D6
+.Exit:
+            bsr.w   Restore
+            move    (SP)+,SR
+            jmp     (A6)
+regLoop:
+            moveq   #0,D6
+            move.w  #$FF,D1
+            clr.w   D4
+            move.b  (A1),D0
+            move.w  (SP),(SP)
+            move.b  D2,(A0)
+            move.w  (SP),(SP)
+            move.b  (A1),D5
+            move.w  (SP),(SP)
+.L1:
+            move.b  D2,(A0)
+            move.w  (SP),(SP)
+            and.b   D3,D4
+            move.b  D4,(A0)
+            move.w  (SP),(SP)
+            move.b  D2,(A0)
+            move.w  (SP),(SP)
+            move.b  (A1),D0
+            and.b   D3,D0
+            cmp.b   D4,D0
+            bne.b   .L2
+            addq.w  #1,D4
+            dbf     D1,.L1
+            bra.b   .L3
+.L2:
+            moveq   #1,D6
+.L3:
+            move.b  D2,(A2)
+            move.w  (SP),(SP)
+
+
+MainTbl:
+ResetTbl:
+DefaultTbl:
+LoopTbl:
