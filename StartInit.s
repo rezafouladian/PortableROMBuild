@@ -512,6 +512,7 @@ GetPRAM:
 ; 2 = 68020
 ; 3 = 68030
 WhichCPU:
+            machine mc68040
             lea     IllegalInstructionVector,A1
             move.l  (A1),-(SP)                      ; Save the vector
             lea     .ILException,A0                 
@@ -520,14 +521,11 @@ WhichCPU:
             clr.w   -(SP)
             moveq   #cpu68020,D7
             move.w  #$2909,D0
-            dc.l    $4E7B0002
-            ; ^ movec   D0,CACR
-            dc.l    $4E7A0002
-            ;^ movec   CACR,D0
+            movec   D0,CACR
+            movec   CACR,D0
             bclr.l  #8,D0                           ; Clear Enable Data Cache bit
             beq.b   .L2
-            dc.l    $4E7B0002
-            ; ^ movec   D0,CACR
+            movec   D0,CACR
             moveq   #cpu68030,D7
             bra.b   .L2
 ; If we're here then an exception occurred and the CPU is a 68000 or 68010
