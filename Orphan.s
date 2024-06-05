@@ -126,9 +126,6 @@ SccTimerTest:
             org     $904A98
 BootBeep:
 
-            org     $902322
-SccRegTest:
-
             org     $903EA6
 SizeMemory:
 

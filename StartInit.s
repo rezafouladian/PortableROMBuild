@@ -47,6 +47,12 @@ PortableAbs EQU     0
                 jsr (*-6,PC,\2.l)
             endm
 
+            ; This delay is used for SCC access during tests
+            ; It is defined as a macro here to quickly redefine it for faster processors if needed.
+            macro _SCCDelay
+                move.w  (SP),(SP)
+            endm
+
             org     BaseOfROM
 Checksum    dc.l    $96CA3846
 StartPC     dc.l    ResetEntry
@@ -3200,7 +3206,7 @@ writescc2:
             move.w  (A2)+,D0
             move.b  (A1),D2
 .loop:
-            move.w  (SP),(SP)
+            _SCCDelay
             move.b  (A2)+,(A0)
             dbf     D0,.loop
             rts        
@@ -3214,7 +3220,7 @@ scclp:
             moveq   #-1,D3
             moveq   #0,D6
             move.b  #$30,(A0)
-            move.b  (SP),(SP)
+            _SCCDelay
 .L3:
             btst.b  #2,(A1)
             bne.b   .L4
@@ -3226,7 +3232,7 @@ scclp:
             moveq   #-1,D3
 .L5:
             move.b  #1,(A0)
-            move.w  (SP),(SP)
+            _SCCDelay
             btst.b  #0,(A1)
             bne.b   .L6
             dbf     D3,.L5
@@ -3248,7 +3254,7 @@ scclp:
             bra.b   .Exit
 .L9:
             move.b  #1,(A0)
-            move.w  (SP),(SP)
+            _SCCDelay
             move.b  (A1),D2
             andi.b  #$70,D2
             beq.b   .L10
@@ -3287,19 +3293,19 @@ regLoop:
             move.w  #$FF,D1
             clr.w   D4
             move.b  (A1),D0
-            move.w  (SP),(SP)
+            _SCCDelay
             move.b  D2,(A0)
-            move.w  (SP),(SP)
+            _SCCDelay
             move.b  (A1),D5
-            move.w  (SP),(SP)
+            _SCCDelay
 .L1:
             move.b  D2,(A0)
-            move.w  (SP),(SP)
+            _SCCDelay
             and.b   D3,D4
             move.b  D4,(A0)
-            move.w  (SP),(SP)
+            _SCCDelay
             move.b  D2,(A0)
-            move.w  (SP),(SP)
+            _SCCDelay
             move.b  (A1),D0
             and.b   D3,D0
             cmp.b   D4,D0
@@ -3311,10 +3317,18 @@ regLoop:
             moveq   #1,D6
 .L3:
             move.b  D2,(A2)
-            move.w  (SP),(SP)
+            _SCCDelay
+            move.b  D5,(A0)
+            tst.w   D6
+            rts
+SccRegTest:
+            bsr.w   Restore
+            lea     regtests,A2
 
 
 MainTbl:
 ResetTbl:
 DefaultTbl:
 LoopTbl:
+TimerTbl:
+regtests:
