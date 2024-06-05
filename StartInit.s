@@ -1065,7 +1065,7 @@ PowerManagerInit:
             move.w  #ErrPmgrTurnOn,D7
             lea     .L1,A6
             move.w  #(powerCntl<<8|1<<0),D0
-            move.l  #(1<<pTurnOn)<<24,D1
+            move.l  #(0<<pTurnOn|1<<pModem)<<24,D1
             jpp     QuasiPwrMgr
 .L1:
             move.w  A0,D6
@@ -1747,7 +1747,7 @@ TMEntry1:
 .L1:
             lea     .checkForASC,A6
             move.w  #(powerCntl<<8|1<<0),D0
-            move.l  #(1<<pTurnOn)<<24,D1
+            move.l  #(0<<pTurnOn|1<<pModem)<<24,D1
             jpp     QuasiPwrMgr
 .checkForASC:
             btst.l  #test,D7
