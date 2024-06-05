@@ -118,14 +118,9 @@ MapRamDataTest:
             org     $902064
 NoTest:
 
-            org     $901F90
-ExtRAMTest:
-
             org     $9027DE
 PRAMTest:
 
-            org     $901F22
-RomTest:
 
             org     $901FEE
 AddrLineTest:

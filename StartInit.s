@@ -538,9 +538,7 @@ WhichCPU:
             movea.l A0,SP
             move.l  (SP)+,(A1)                      ; Restore the exception handler
             rts
-            IF PortableAbs
-            org     $9005F0
-            ENDIF
+            machine mc68000
 ; WhichBoard
 ;
 ; Determine the logic board (BoxFlag) and put it in the high word of D7.
@@ -2607,7 +2605,7 @@ DataBusTest:
             swap    D0
             or.w    D0,D6
             andi.l   #$FFFF,D6
-            jmp     (A6)
+            jmp     (A6)                            ; Return
 StartUpROMTest:
             moveq   #0,D0
             moveq   #0,D1
@@ -2625,7 +2623,7 @@ StartUpROMTest:
             beq.b   .End
             move.w  #$FFFF,D6                       ; Set failed code in minor error register
 .End:
-            jmp     (A6)
+            jmp     (A6)                            ; Return
 Mod3Test:
             movem.l .Mod3Pat,D0-D5
             movea.l A0,A2
@@ -2735,4 +2733,211 @@ Mod3Test:
             dc.l    $B6DB6DB6
             dc.l    $DB6DB6DB
 RevMod3Test:
-            
+            movem.l .RevMod3Pat,D0-D5
+            movea.l A1,A2
+            adda.w  #$78,A0
+            bra.b   .Fill120Start
+.Fill120Loop:
+            movem.l D5-D0,-(A2)
+            movem.l D5-D0,-(A2)
+            movem.l D5-D0,-(A2)
+            movem.l D5-D0,-(A2)
+            movem.l D5-D0,-(A2)
+.Fill120Start:
+            cmpa.l  A2,A0
+            ble.b   .Fill120Loop
+            adda.w  #$FF94,A0
+            bra.b   .Fill12Start
+.Fill12Loop:
+            movem.l D2-D0,-(A2)
+.Fill12Start:
+            cmpa.l  A2,A0
+            ble.b   .Fill12Loop
+            suba.w  #12,A0
+            moveq   #8,D4
+            cmpa.l  A2,A0
+            beq.b   .FillDone
+            move.l  D2,-(A2)
+            moveq   #4,D4
+            cmpa.l  A2,A0
+            beq.b   .FillDone
+            move.l  D1,-(A2)
+            moveq   #0,D4
+.FillDone:
+            movea.l A1,A2
+            subq.l  #4,A2
+            move.l  A2,D3
+            sub.l   A0,D3
+            moveq   #$3F,D0
+            and.w   D3,D0
+            neg.w   D0
+            lsr.l   #6,D3
+            eor.l   D1,(A2)
+            addi.l  #-1,D5
+            jmp     (.L2,PC,D0.w)
+.L1:
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+            move.l  (A2),D0
+            eor.l   D0,-(A2)
+.L2:
+            dbf     D3,.L1
+            subi.l  #$10000,D3
+            bpl.b   .L1
+            cmp.l   D2,D1
+            beq.b   .L3
+            move.l  D2,D1
+            bra.b   .FillDone
+.L3:
+            movem.l (A0),D0-D2
+            movem.l (.Exit,PC,D4.w),D3-D5
+            eor.l   D3,D0
+            eor.l   D4,D1
+            eor.l   D5,D2
+            or.l    D2,D0
+            or.l    D1,D0
+            or.l    D0,D6
+            swap    D0
+            or.w    D0,D6
+            andi.l  #$FFFF,D6
+.Exit:
+            jmp     (A6)
+.RevMod3Pat:
+            dc.l    $6DB6DB6D
+            dc.l    $B6DB6DB6
+            dc.l    $DB6DB6DB
+            dc.l    $6DB6DB6D
+            dc.l    $B6DB6DB6
+            dc.l    $DB6DB6DB
+RomTest:
+            lea     myROMSums.l,A1
+            lea     BaseOfROM,A0
+            move.l  (A0)+,D0
+            movea.l A1,A2
+            moveq   #0,D0
+            moveq   #0,D1
+            moveq   #0,D2
+            moveq   #0,D3
+            moveq   #0,D4
+            moveq   #0,D5
+.L1:
+            move.w  (A0)+,D5
+            move.b  D5,D4
+            add.l   D4,D1
+            lsr.l   #8,D5
+            move.b  D5,D4
+            add.l   D4,D0
+            cmpa.l  A0,A1
+            bgt.b   .L1
+            adda.w  #$10,A0
+            lea     (BaseOfROM+ROMSize),A1
+.L2:
+            move.w  (A0)+,D5
+            move.b  D5,D4
+            add.l   D4,D1
+            lsr.l   #8,D5
+            move.b  D5,D4
+            add.l   D4,D0
+            cmpa.l  A0,A1
+            bgt.b   .L2
+            move.l  (A2)+,D4
+            eor.l   D4,D0
+            beq.b   .L3
+            bset.l  #0,D6
+.L3:
+            move.l  (A2)+,D4
+            eor.l   D4,D1
+            beq.b   .L4
+            bset.l  #1,D6
+.L4:
+            move.l  (A2)+,D4
+            eor.l   D4,D2
+            beq.b   .L5
+            bset.l  #2,D6
+.L5:
+            move.l  (A2)+,D4
+            eor.l   D4,D3
+            beq.b   .L6
+            bset.l  #3,D6
+.L6:
+            jmp     (A6)                            ; Return
+ExtRAMTest:
+            moveq   #0,D0
+            moveq   #-1,D1
+            movea.l A0,A2
+            move.l  A1,A2
+            sub.l   A0,D2
+            lsr.l   #2,D2
+            move.l  D2,D3
+.L1:
+            move.l  D0,(A2)+
+            subq.l  #1,D2
+            bne.b   .L1
+            move.l  D3,D2
+            movea.l A0,A2
+.L2:
+            tst.l   (A2)
+            bne.b   .L7
+            eor.l   D1,(A2)+
+            subq.l  #1,D2
+            bne.b   .L2
+            move.l  D3,D2
+.L3:
+            eor.l   D1,-(A2)
+            bne.b   .L7
+            subq.l  #1,D2
+            bne.b   .L3
+            move.l  D3,D2
+.L4:
+            tst.l   (A2)
+            bne.b   .L7
+            subq.l  #1,D2
+            bne.b   .L4
+            move.l  D3,D2
+.L5:
+            eor.l   D1,-(A2)
+            bne.b   .L7
+            subq.l  #1,D2
+            bne.b   .L5
+            move.l  D3,D2
+.L6:
+            tst.l   (A2)+
+            bne.b   .L7
+            subq.l  #1,D2
+            bne.b   .L6
+            jmp     (A6)
+.L7:
+            or.l    (A2),D6
+            move.l  D6,D0
+            swap    D0
+            or.w    D0,D6
+            andi.l  #$FFFF,D6
+            jmp     (A6)
