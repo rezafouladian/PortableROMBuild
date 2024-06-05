@@ -1080,40 +1080,30 @@ PowerManagerInit:
             tst.l   D6
             bne.w   Error1Handler
             move.w  #ErrROM,D7
-            lea     .L3,A6
-            jpp     StartUpROMTest
-.L3:
+            BSR6    StartUpROMTest
             tst.l   D6
             bne.w   Error1Handler
             clr.w   D7
             move.w  #ErrPmgrSt,D7
             move.w  #(PmgrSelfTest<<8|0<<0),D0
-            lea     .L4,A6
-            jpp     QuasiPwrMgr
-.L4:
+            BSR6    QuasiPwrMgr
             move.w  A0,D6
             swap    D6
             move.w  D1,D6
             swap    D6
-            tst.l   D6
-            bne.w   Error1Handler
-            move.w  #ErrVidAddr,D7
-            lea     .L5,A6
-            jpp     VramAddrTest
-.L5:
-            tst.l   D6
-            bne.w   Error1Handler
-            move.w  #ErrVidRAM,D7
-            lea     .L6,A6
-            jpp     VramDataTest
-.L6:
+            tst.l   D6                              ; Any error?
+            bne.w   Error1Handler                   ; Yes, handle error
+            move.w  #ErrVidAddr,D7                  ; Load video address test error code $83
+            BSR6    VramAddrTest
+            tst.l   D6                              ; Any error?
+            bne.w   Error1Handler                   ; Yes, handle error
+            move.w  #ErrVidRAM,D7                   ; Load video RAM test error code $82
+            BSR6    VramDataTest
             tst.l   D6
             bne.w   Error1Handler
             lea     Sound_Base,SP
             move.w  #(readINT<<8|0<<0),D0
-            lea     .L7,A6
-            jpp     QuasiPwrMgr
-.L7:
+            BSR6    QuasiPwrMgr
             btst.l  #oneSecIntFlag,D1
             beq.b   .L8
             clr.l   WarmStart
@@ -1127,9 +1117,7 @@ PowerManagerInit:
             move.b  (q6H-DBase,A2),D0
             move.w  #ErrData,D7
             suba.l  A0,A0
-            lea     .L9,A6
-            jpp     DataBusTest
-.L9:
+            BSR6    DataBusTest
             tst.l   D6
             bne.w   Error1Handler
             move.w  #ErrSizeMem,D7
@@ -1139,9 +1127,7 @@ PowerManagerInit:
 .L10:
             move.w  #(xPramRead<<8|2<<0),D0
             move.l  #$46010000,D1
-            lea     .L11,A6
-            jpp     QuasiPwrMgr
-.L11:
+            BSR6    QuasiPwrMgr
             cmpa.w  #0,A0
             bne.w   Error1Handler
             movea.l D6,A0
@@ -1210,16 +1196,12 @@ PowerManagerInit:
             move.w  #ErrRAMC,D7
             movea.l SP,A0
             subq.w  #8,A0
-            lea     .L25,A6
-            jpp     DataBusTest
-.L25:
+            BSR6    DataBusTest
             tst.l   D6
             bne.w   .L27
             move.w  #ErrAddr,D7
             movea.l SP,A0
-            lea     .L26,A6
-            jpp     AddrLineTest
-.L26:
+            BSR6    AddrLineTest
             tst.l   D6
             bne.b   .L27
             clr.w   D7
@@ -1236,9 +1218,7 @@ PowerManagerInit:
             bne.w   PostProc
             move.w  #(xPramRead<<8|2<<0),D0
             move.l  #$46010000,D1
-            lea     .L29,A6
-            jpp     QuasiPwrMgr
-.L29:
+            BSR6    QuasiPwrMgr
             move.w  A0,D6
             tst.l   D6
             bne.w   Error1Handler
@@ -1294,9 +1274,7 @@ RamTest:
             moveq   #0,D7
             move.w  #ErrRAMA,D7
             ori     #$300,SR
-            lea     .RamTestRtn,A6
-            jpp     Mod3Test
-.RamTestRtn:
+            BSR6    Mod3Test
             tst.l   D6
             bne.w   Error3Handler
             move    (SP)+,SR
@@ -1317,9 +1295,7 @@ Error1Handler:
             movea.l D7,A0
             move    A0,USP
             lea     Sound_Base,A3
-            lea     .L2,A6
-            jpp     ErrorBeep1
-.L2:
+            BSR6    ErrorBeep1
             move    USP,A0
             move.l  A0,D7
             jpp     CritErr
@@ -1329,17 +1305,13 @@ Error1Handler:
             bset.l  #timer,D7
             move.w  #sec,D4
             swap    D4
-            lea     .L4,A6
-            jpp     StartTimer
-.L4:
+            BSR6    StartTimer
             bra.w   TMEntry1
 Error3Handler:
             movea.l D7,A0
             move    A0,USP
             lea     Sound_Base,A3
-            lea     .L1,A6
-            jpp     ErrorBeep2
-.L1:
+            BSR6    ErrorBeep2
             move    USP,A0
             move.l  A0,D7
             jpp     CritErr
@@ -1347,9 +1319,7 @@ Error4Handler:
             movea.l D7,A0
             move    A0,USP
             lea     Sound_Base,A3
-            lea     .L1,A6
-            jpp     ErrorBeep3
-.L1:
+            BSR6    ErrorBeep3
             move    USP,A0
             move.l  A0,D7
             jpp     CritErr
@@ -1361,23 +1331,17 @@ NCErrorHandler:
 .L1:
             movea.l A6,A4
             moveq   #$70,D1
-            lea     .L1_1,A6
-            jpp     RdXByte
-.L1_1:
+            BSR6    RdXByte
             bset.l  #0,D1
             move.b  D1,D2
             moveq   #$70,D1
-            lea     .L2,A6
-            jpp     WrXByte
-.L2:
+            BSR6    WrXByte
             moveq   #$78,D3
 .L3:
             rol.l   #8,D6
             move.b  D6,D2
             move.b  D3,D1
-            lea     .L4,A6
-            jpp     WrXByte
-.L4:
+            BSR6    WrXByte
             addq.w  #1,D3
             cmpi.w  #$7C,D3
             blt.b   .L3
@@ -1385,9 +1349,7 @@ NCErrorHandler:
             rol.l   #8,D7
             move.b  D7,D2
             move.b  D3,D1
-            lea     .L6,A6
-            jpp     WrXByte
-.L6:
+            BSR6    WrXByte
             addq.w  #1,D3
             cmpi.w  #$80,D3
             blt.b   .L5
@@ -1450,8 +1412,7 @@ TestManager:
 .StopTest:
             btst.l  #pram,D7
             beq.b   .noStore
-            lea     .noStore,A6
-            jpp     StoreResults
+            BSR6    StoreResults
 .noStore:
             btst.l  #boot,D7
             beq.w   .Exit
@@ -1673,9 +1634,7 @@ F35:
             moveq   #100,D2
             moveq   #112,D1
             move.l  A4,-(SP)
-            lea     .L1,A6
-            jpp     WrXByte
-.L1:
+            BSR6    WrXByte
             movea.l (SP)+,A4
             lea     (-$24,A4),A0
             lea     (-$17,A4),A1
@@ -1736,9 +1695,7 @@ TMEntry0:
 TMEntry1:
             move.w  #(powerCntl<<8|1<<0),D0
             move.l  #(1<<pTurnOn|1<<pMinus5V|1<<pASC|1<<pSerDrvr|1<<pHD|1<<pSCC|1<<pIWM)<<24,D1
-            lea     .L1,A6
-            jpp     QuasiPwrMgr
-.L1:
+            BSR6    QuasiPwrMgr
             lea     .checkForASC,A6
             move.w  #(powerCntl<<8|1<<0),D0
             move.l  #(0<<pTurnOn|1<<pModem)<<24,D1
@@ -1749,28 +1706,21 @@ TMEntry1:
             movea.l D7,A3
             move    A3,USP
             lea     Sound_Base,A3
-            lea     .L2,A6
-            jpp     ErrorBeep4
-.L2:
+            BSR6    ErrorBeep4
             move    USP,A3
             move.l  A3,D7
 .SkipSound:
             ori     #$300,SR
             moveq   #0,D5
-            lea     getCmd,A6
-            jpp     SetupBases
+            BSR6    SetupBases
 getCmd:
-            lea     .L1,A6
-            jpp     GetChar
-.L1:
+            BSR6    GetChar
             tst.w   D5
             bpl.b   .gotChar
             btst.l  #nosleep,D7
             bne.w   TMRestart_Continue
             move.w  #(batteryRead<<8|0<<0),D0
-            lea     .L2,A6
-            jpp     QuasiPwrMgr
-.L2:
+            BSR6    QuasiPwrMgr
             btst.l  #excp,D1
             bne.w   TMRestart_Continue
             move.l  #$FFFF0800,D4
@@ -1779,9 +1729,7 @@ getCmd:
 .L4:
             dbf     D4,.L4
             move.w  #(batteryRead<<8|0<<0),D0
-            lea     .L5,A6
-            jpp     QuasiPwrMgr
-.L5:
+            BSR6    QuasiPwrMgr
             btst.l  #excp,D1
             bne.w   TMRestart_Continue
             swap    D4
@@ -1812,9 +1760,7 @@ getCmd:
             cmpi.b  #'L',D5
             bne.b   .ByteCnt
             moveq   #4,D2
-            lea     .LoadAddr2,A6
-            jpp     GetNBytes
-.LoadAddr2:
+            BSR6    GetNBytes
             movea.l D1,A4
             btst.l  #echo,D7
             beq.w   EchoCmd
@@ -1830,9 +1776,7 @@ getCmd:
             cmpi.b  #'B',D5
             bne.b   .GetData
             moveq   #2,D2
-            lea     .ByteCnt2,A6
-            jpp     GetNBytes
-.ByteCnt2:
+            BSR6    GetNBytes
             move.w  D1,D4
             btst.l  #echo,D7
             beq.w   EchoCmd
@@ -1857,9 +1801,7 @@ getCmd:
             clr.w   D4
 .GetData2:
             move.w  #1,D2
-            lea     .GetData3,A6
-            jpp     GetNBytes
-.GetData3:
+            BSR6    GetNBytes
             move.b  D1,(A4)+
             moveq   #0,D0
             move.b  D1,D0
@@ -1888,23 +1830,15 @@ getCmd:
             cmpi.b  #'G',D5
             bne.b   .LoadA0
             moveq   #4,D2
-            lea     .Execute2,A6
-            jpp     GetNBytes
-.Execute2:
+            BSR6    GetNBytes
             movea.l D1,A3
             move.b  #$2A,D0
-            lea     .Execute3,A6
-            jpp     SendString
-.Execute3:
+            BSR6    SendString
             move.b  #$47,D0
-            lea     .Execute4,A6
-            jpp     SendString
-.Execute4:
+            BSR6    SendString
             bset.l  #crlf,D7
             moveq   #0,D2
-            lea     .Execute5,A6
-            jpp     PutNBytes
-.Execute5:
+            BSR6    PutNBytes
             bclr.l  #crlf,D7
             lea     EchoCmd,A6
             jmp     (A3)
@@ -1912,9 +1846,7 @@ getCmd:
             cmpi.b  #'0',D5
             bne.b   .LoadA1
             moveq   #4,D2
-            lea     .LoadA0_2,A6
-            jpp     GetNBytes
-.LoadA0_2:
+            BSR6    GetNBytes
             movea.l D1,A0
             btst.l  #echo,D7
             beq.w   EchoCmd
@@ -1927,9 +1859,7 @@ getCmd:
             cmpi.b  #'1',D5
             bne.b   .SetCache
             moveq   #4,D2
-            lea     .LoadA1_2,A6
-            jpp     GetNBytes
-.LoadA1_2:
+            BSR6    GetNBytes
             movea.l D1,A1
             btst.l  #echo,D7
             beq.w   EchoCmd
@@ -1998,9 +1928,7 @@ getCmd:
             bclr.l  #crlf,D7
             move.l  D6,D0
             moveq   #4,D2
-            lea     .SendResults2,A6
-            jpp     PutNBytes
-.SendResults2:
+            BSR6    PutNBytes
             bclr.l  #crlf,D7
             move.w  D7,D0
             moveq   #2,D2
@@ -2034,12 +1962,10 @@ getCmd:
             jpp     StartTest1
 .PwrMgrCmd:
             cmpi.b  #'P',D5
-            bne.b   .DoCritTestCmd
+            bne.b   .DoCritTest
             movea.l D5,A3
             moveq   #2,D2
-            lea     .PwrMgrCmd2,A6
-            jpp     GetNBytes
-.PwrMgrCmd2:
+            BSR6    GetNBytes
             move.w  D1,D3
             tst.b   D3
             beq.b   .PwrMgrCmd4
@@ -2050,34 +1976,27 @@ getCmd:
 .PwrMgrCmd3:
             move.b  D3,D2
             andi.l  #$FF,D2
-            lea     .PwrMgrCmd4,A6
-            jpp     GetNBytes
+            BSR6    GetNBytes
 .PwrMgrCmd4:
             move.w  D3,D0
             moveq   #4,D2
             sub.b   D0,D2
             asl.b   #3,D2
             asl.l   D2,D1
-            lea     .PwrMgrCmd5,A6
-            jpp     QuasiPwrMgr
-.PwrMgrCmd5:
+            BSR6    QuasiPwrMgr
             move.w  D0,D7
             move.l  D1,D6
             move.l  A3,D5
             bra.w   EchoCmd
-.DoCritTestCmd:
-            cmpi.b  #'T',D5
-            bne.w   .DoNonCritTestCmd
-            moveq   #4,D2
-            lea     .DoCritTest,A6
-            jpp     GetNBytes
 .DoCritTest:
+            cmpi.b  #'T',D5
+            bne.w   .DoNonCritTest
+            moveq   #4,D2
+            BSR6    GetNBytes
             movea.l D1,A2
             move    A2,USP
             moveq   #2,D2
-            lea     .DoCritTest2,A6
-            jpp     GetNBytes
-.DoCritTest2:
+            BSR6    GetNBytes
             move.w  D1,D4
             move.w  #$1C,D2
             lsl.l   D2,D1
@@ -2087,13 +2006,10 @@ getCmd:
             move    USP,A2
             move.l  A2,D0
             moveq   #4,D2
-            lea     .DoCritTest3,A6
-            jpp     PutNBytes
-.DoCritTest3:
+            BSR6    PutNBytes
             move.w  D4,D0
             moveq   #2,D2
-            lea     .DoCritTestLoop,A6
-            jpp     PutNBytes
+            BSR6    PutNBytes
 .DoCritTestLoop:
             moveq   #0,D6
             move    USP,A2
@@ -2107,13 +2023,11 @@ getCmd:
             move.w  (A5,D1),D1
             lea     (A5,D1),A5
             lea     .DoCritTest4,A6
-            jmp     (A5)
+            jmp    (A5)
 .DoCritTest4:
             tst.l   D6
             beq.b   .DoCritTestContinue
-            lea     .DoCritTest5,A6
-            jpp     TMErrorSend
-.DoCritTest5:
+            BSR6    TMErrorSend
             btst.l  #loop,D7
             beq.b   .DoCritTestNoLoop
 .DoCritTestErrLoop:
@@ -2130,27 +2044,21 @@ getCmd:
             move    A2,USP
             tst.w   D1
             beq.b   .DoCritTestEcho
-            lea     .DoCritTest6,A6
-            jpp     GetChar
-.DoCritTest6:
+            BSR6    GetChar
             tst.w   D5
             bmi.b   .DoCritTestLoop
 .DoCritTestEcho:
             move.l  #$540054,D5                     ; Fake a "T" to echo
             bra.w   EchoCmd
-.DoNonCritTestCmd:
+.DoNonCritTest:
             cmpi.b  #'N',D5
             bne.w   .DoTest_Invalid
             moveq   #4,D2
-            lea     .DoNonCritTest,A6
-            jpp     GetNBytes
-.DoNonCritTest:
+            BSR6    GetNBytes
             movea.l D1,A2
             move    A2,USP
             moveq   #2,D2
-            lea     .DoNonCritTest2,A6
-            jpp     GetNBytes
-.DoNonCritTest2:
+            BSR6    GetNBytes
             move.w  D1,D4
             move.w  #$1C,D2
             lsl.l   D2,D1
@@ -2160,13 +2068,10 @@ getCmd:
             move    USP,A2
             move.l  A2,D0
             moveq   #4,D2
-            lea     .DoNonCritTest3,A6
-            jpp     PutNBytes
-.DoNonCritTest3:
+            BSR6    PutNBytes
             move.w  D4,D0
             moveq   #2,D2
-            lea     .DoNonCritTest4,A6
-            jpp     PutNBytes
+            BSR6    PutNBytes
 .DoNonCritTest4:
             moveq   #0,D6
             move    USP,A2
@@ -2193,14 +2098,11 @@ getCmd:
             cmpi.w  #$86,D1
             bne.b   .DoNonCritTest7
 .DoNonCritTest6:
-            lea     .DoNonCritTest7,A6
-            jpp     SetupBases
+            BSR6    SetupBases
 .DoNonCritTest7:
             tst.l   D6
             beq.b   .DoNonCritTest11
-            lea     .DoNonCritTest8,A6
-            jpp     TMErrorSend
-.DoNonCritTest8:
+            BSR6    TMErrorSend
             btst.l  #loop,D7
             beq.b   .DoNonCritTest10
 .DoNonCritTest9:
@@ -2217,9 +2119,7 @@ getCmd:
             move    A2,USP
             tst.w   D1
             beq.b   .DoNonCritTest13
-            lea     .DoNonCritTest12,A6
-            jpp     GetChar
-.DoNonCritTest12:
+            BSR6    GetChar
             tst.w   D5
             bmi.w   .DoNonCritTest4
 .DoNonCritTest13:
@@ -2232,19 +2132,14 @@ getCmd:
             jpp     SendString
 EchoCmd:
             move.b  #$2A,D0
-            lea     .L1,A6
-            jpp     SendString
-.L1:
+            BSR6    SendString
             swap    D5
             move.b  D5,D0
             swap    D5
-            lea     .L2,A6
-            jpp     SendString
-.L2:
+            BSR6    SendString
             bset.l  #crlf,D7
             moveq   #0,D2
-            lea     EchoCmd_End,A6
-            jpp     PutNBytes
+            BSR6    PutNBytes
 EchoCmd_End:
             bclr.l  #crlf,D7
 TMRestart_Continue:
@@ -2253,9 +2148,7 @@ TMRestart_Continue:
             btst.l  #timer,D7
             beq.b   .NoTimer
             move.w  #sec,D0
-            lea     .L1,A6
-            jpp     TMRestart_SubVIA
-.L1:
+            BSR6    TMRestart_SubVIA
             tst.w   D0
             bpl.b   .NoUnQ
 .NoTimer:
@@ -2264,31 +2157,23 @@ TMRestart_Continue:
             move.b  (A1)+,D4
 .L2:
             move.b  (A1)+,D0
-            lea     .L3,A6
-            jpp     SendString
-.L3:
+            BSR6    SendString
             dbf     D4,.L2
             bclr.l  #crlf,D7
             bset.l  #aski,D7
             move.l  D6,D0
             moveq   #4,D2
-            lea     .L4,A6
-            jpp     PutNBytes
-.L4:
+            BSR6    PutNBytes
             move.w  D7,D0
             moveq   #2,D2
-            lea     .L5,A6
-            jpp     PutNBytes
-.L5:
+            BSR6    PutNBytes
             bclr.l  #aski,D7
             lea     .b1MsgLength,A1
             clr.w   D4
             move.b  (A1)+,D4
 .L6:
             move.b  (A1)+,D0
-            lea     .L7,A6
-            jpp     SendString
-.L7:
+            BSR6    SendString
             dbf     D4,.L6
             btst.l  #timer,D7
             bne.b   .NoUnQ
@@ -2311,9 +2196,7 @@ TMErrorSend:
             move.b  (A1)+,D1
 .L1:
             move.b  (A1)+,D0
-            lea     .L2,A6
-            jpp     SendString
-.L2:
+            BSR6    SendString
             dbf     D1,.L1
             jmp     (A4)
 .ErrorMsgLength:
@@ -2585,9 +2468,7 @@ QuasiPwrMgr:
             ori.w   #$300,SR
             rol.w   #8,D0
             move.b  D0,D5
-            lea     .L5,A6
-            jpp     QPM_Send
-.L5:
+            BSR6    QPM_Send
             beq.b   .L6
             ror.w   #8,D0
             dbf     D2,.L1
@@ -2597,18 +2478,14 @@ QuasiPwrMgr:
             rol.w   #8,D0
             move.b  D0,D2
             move.b  D0,D5
-            lea     .L7,A6
-            jpp     QPM_Send
-.L7:
+            BSR6    QPM_Send
             bne.b   .Exit
             subq.w  #1,D2
             bmi.b   .L10
 .L8:
             rol.l   #8,D1
             move.b  D1,D5
-            lea     .L9,A6
-            jpp     QPM_Send
-.L9:
+            BSR6    QPM_Send
             bne.b   .Exit
             dbf     D2,.L8
 .L10:
@@ -2624,14 +2501,10 @@ QuasiPwrMgr:
             bra.b   .Exit
 .L12:
             clr.w   D2
-            lea     .L13,A6
-            jpp     QPM_Receive
-.L13:
+            BSR6    QPM_Receive
             bne.b   .Exit                           ; Exit if there was an error
             move.b  D5,D0
-            lea     .L14,A6
-            jpp     QPM_Receive
-.L14:
+            BSR6    QPM_Receive
             bne.b   .Exit                           ; Exit if there was an error
             rol.w   #8,D0
             move.b  D5,D0
@@ -2643,9 +2516,7 @@ QuasiPwrMgr:
             subq.b  #1,D2
             bmi.b   .L19
 .L16:
-            lea     .L17,A6
-            jpp     QPM_Receive
-.L17:
+            BSR6    QPM_Receive
             bne.b   .Exit                           ; Exit if there was an error
             rol.l   #8,D1
             move.b  D5,D1
@@ -2718,9 +2589,7 @@ QPM_Receive:
             bra.b   QPM_DataEnd                     ; Finish up
 STPWRMGR:
             movem.l A6-A0/D5-D2,-(SP)
-            lea     .L1,A6
-            jpp     QuasiPwrMgr
-.L1:
+            BSR6    QuasiPwrMgr
             movem.l (SP)+,D2-D5/A0-A6
             rts
 DataBusTest:
