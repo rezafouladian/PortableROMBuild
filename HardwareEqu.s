@@ -121,6 +121,8 @@ VIA_DDR_A       EQU         $F70600
 VIA_DDR_B       EQU         $F70400
 VIA_ORA         EQU         $F71E00
 VIA_PCR         EQU         $F71800
+VIA_T1C_L       EQU         $F70800
+VIA_T1C_H       EQU         $F70A00
 
 SCCRBase        EQU         $FD0000
 SCCWBase        EQU         $FD8000

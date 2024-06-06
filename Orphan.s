@@ -106,10 +106,6 @@ ErrorBeep4:
 DoBeep:
 
 
-            org     $9025C2
-TestSCSI:
-
-
 
             org     $9027DE
 PRAMTest:

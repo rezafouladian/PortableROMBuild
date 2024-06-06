@@ -3221,7 +3221,7 @@ scclp:
             moveq   #-1,D3
             moveq   #0,D6
             move.b  #$30,(A0)
-            _SCCDelay
+            move.b  (SP),(SP)                       ; Delay (byte move instead of the usual word for some reason)
 .L3:
             btst.b  #2,(A1)
             bne.b   .L4
@@ -3489,3 +3489,131 @@ bregtests:
             dc.b    $FF
             dc.b    $FF
 ViaTest:
+            movea.w #Lev1AutoVector,A2
+            move.l  (A2),-(SP)
+            lea     LocalVIA1Int,A0
+            move.l  A0,(A2)
+            moveq   #0,D6
+            movea.l #VIA_Base,A0
+            andi.b  #$1F,(VIA_ACR-VIA_Base,A0)
+            ori.b   #$40,(VIA_ACR-VIA_Base,A0)
+            move.b  #$62,(VIA_IFR-VIA_Base,A0)
+            move.b  #$E2,(VIA_IER-VIA_Base,A0)
+            moveq   #0,D3
+            moveq   #0,D4
+            moveq   #0,D5
+            move.b  #$FF,(VIA_T1C_L-VIA_Base,A0)
+            move.b  #$FF,(VIA_T2_L-VIA_Base,A0)
+            move.b  #$2,(VIA_T1C_H-VIA_Base,A0)
+            move.b  #$3F,(VIA_T2_H-VIA_Base,A0)
+            move.l  #$F0000,D0
+            move    #$2000,SR
+.L1:
+            cmpi.w  #$A,D3
+            beq.b   .L2
+            subq.l  #1,D0
+            bne.b   .L1
+.L2:
+            move.w  #$2700,SR
+            moveq   #1,D6
+            tst.w   D3
+            beq.w   .Exit
+            moveq   #2,D6
+            cmpi.w  #$A,D3
+            bne.w   .Exit
+            moveq   #3,D6
+            tst.w   D4
+            beq.w   .Exit
+            moveq   #4,D6
+            cmpi.w  #$80,D4
+            bmi.w   .Exit
+            moveq   #5,D6
+            cmpi.w  #$D0,D4
+            bpl.w   .Exit
+            moveq   #6,D6
+            tst.w   D5
+            beq.w   .Exit
+            moveq   #7,D6
+            cmpi.w  #1,D5
+            bne.w   .Exit
+            moveq   #8,D6
+            moveq   #-1,D0
+.L3:
+            tst.b   (VIA_T1C_L-VIA_Base,A0)
+            dbne    D0,.L3
+            beq.w   .Exit
+            moveq   #9,D6
+            moveq   #-1,D0
+.L4:
+            tst.b   (VIA_T2_L-VIA_Base,A0)
+            dbne    D0,.L4
+            beq.b   .Exit
+            andi.b  #$1F,(VIA_ACR-VIA_Base,A0)
+            move.b  #$62,(VIA_IFR-VIA_Base,A0)
+            move.b  #$E2,(VIA_IER-VIA_Base,A0)
+            moveq   #0,D3
+            moveq   #0,D4
+            moveq   #0,D5
+            move.b  #$FF,(VIA_T1C_L-VIA_Base,A0)
+            move.b  #$FF,(VIA_T2_L-VIA_Base,A0)
+            move.b  #$4,(VIA_T1C_H-VIA_Base,A0)
+            move.b  #$1F,(VIA_T2_H-VIA_Base,A0)
+            move.l  #$F0000,D0
+            move    #$2000,SR
+.L5:
+            cmpi.w  #$A,D3
+            beq.b   .L6
+            subq.l  #1,D0
+            bne.b   .L5
+.L6:
+            move    #$2700,SR
+            moveq   #$A,D6
+            tst.w   D3
+            beq.b   .Exit
+            moveq   #$B,D6
+            tst.w   D4
+            beq.b   .Exit
+            moveq   #$C,D6
+            cmpi.w  #1,D4
+            bne.b   .Exit
+            moveq   #$D,D6
+            tst.w   D5
+            beq.b   .Exit
+            moveq   #$E,D6
+            cmpi.w  #1,D5
+            bne.b   .Exit
+            moveq   #$F,D6
+            moveq   #-1,D0
+.L7:
+            tst.b   (VIA_T2_L-VIA_Base,A0)
+            dbne    D0,.L7
+            beq.b   .Exit
+            clr.w   D6
+.Exit:
+            move    #$2700,SR
+            movea.l #VIA_Base,A0
+            move.b  #$60,(VIA_IER-VIA_Base,A0)
+            move    #$2300,SR
+            movea.w #Lev1AutoVector,A2
+            move.l  (SP)+,(A2)
+            jmp     (A6)
+LocalVIA1Int:
+            movea.l #VIA_Base,A0
+            move.b  (VIA_IFR-VIA_Base,A0),D2
+            move.b  D2,(VIA_IFR-VIA_Base,A0)
+            btst.l  #1,D2
+            beq.b   .L1
+            addq.w  #1,D3
+.L1:
+            btst.l  #6,D2
+            beq.b   .L2
+            addq.w  #1,D4
+.L2:
+            btst.l  #5,D2
+            beq.b   .Exit
+            addq.w  #1,D5
+.Exit:
+            rte
+TestSCSI:
+            movea.l #SCSIrd,A0
+            movea.l #SCSIwr,A1
