@@ -65,6 +65,7 @@ FlEvtMask       EQU         $25E
 IAZNotify       EQU         $33C
 AlarmState      EQU         $21F
 Lev1AutoVector  EQU         $64
+Lev2AutoVector  EQU         $68
 TimeDBRA        EQU         $D00
 IllegalInstructionVector    EQU $10
 JFetch          EQU         $8F4
@@ -105,6 +106,7 @@ MMDefFlags      EQU         $326
 SysMap          EQU         $A58
 TopMapHndl      EQU         $A50
 ResetStackPtr   EQU         $0
+
 
 
 

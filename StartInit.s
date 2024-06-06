@@ -3194,6 +3194,7 @@ Restore:
             lea     ResetTbl,A2
             bsr.b   writescc2
             rts
+; Code is unreachable?
             bsr.b   Restore
             lea     DefaultTbl,A2
             bsr.b   writescc2
@@ -3316,7 +3317,7 @@ regLoop:
 .L2:
             moveq   #1,D6
 .L3:
-            move.b  D2,(A2)
+            move.b  D2,(A0)
             _SCCDelay
             move.b  D5,(A0)
             tst.w   D6
@@ -3324,11 +3325,167 @@ regLoop:
 SccRegTest:
             bsr.w   Restore
             lea     regtests,A2
-
-
+.L1:
+            move.b  (A2),D2
+            bmi.b   .L2
+            move.b  ($1,A2),D3
+            addq.w  #2,A2
+            bsr.b   regLoop
+            bne.b   .Exit
+            bra.b   .L1
+.L2:
+            lea     bregtests,A2
+            subq.w  #2,A0
+            subq.w  #2,A1
+.L3:
+            move.b  (A2),D2
+            bpl.b   .L4
+            bra.b   .Exit
+.L4:
+            move.b  ($1,A2),D3
+            addq.w  #2,A2
+            bsr.b   regLoop
+            bne.b   .Exit
+            bra.b   .L3
+.Exit:
+            bsr.w   Restore
+            jmp     (A6)
+SccTimerTest:
+            move    SR,-(SP)
+            move    #$2700,SR
+            movea.w #Lev2AutoVector,A3
+            move.l  (A3),-(SP)                      ; Save the interrupt address
+            lea     .L5,A0
+            move.l  A0,(A3)
+            bsr.w   Restore
+            lea     TimerTbl,A2
+            bsr.w   writescc2
+            moveq   #1,D6
+            moveq   #-1,D1
+            move.l  #$50000,D0
+            move    #$2100,SR
+.L1:
+            tst.w   D1
+            beq.b   .L2
+            subq.l  #1,D0
+            bne.b   .L1
+            bra.b   .L4
+.L2:
+            tst.w   D1
+            bne.b   .L3
+            subq.l  #1,D0
+            bne.b   .L2
+            moveq   #2,D6
+            bra.b   .L4
+.L3:
+            move    #$2700,SR
+            sub.l   D2,D3
+            moveq   #3,D6
+            cmpi.l  #$10000,D3
+            bgt.b   .L4
+            moveq   #4,D6
+            cmpi.l  #$100,D3
+            blt.b   .L4
+            moveq   #0,D6
+.L4:
+            bsr.w   Restore
+            move    #$2700,SR
+            movea.w #Lev2AutoVector,A3
+            move.l  (SP)+,(A3)                      ; Restore the interrupt address
+            move    (SP)+,SR
+            jmp     (A6)
+.L5:
+            movea.l #SCCWBase,A0
+            move.b  #$10,(SCCW_aCtl-SCCWBase,A0)
+            move.b  #$10,(SCCW_bCtl-SCCWBase,A0)
+            move.l  D0,D2
+            tst.w   D1
+            bpl.b   .L6
+            move.l  D2,D3
+.L6:
+            addq.w  #1,D1
+            move.l  A0,-(SP)
+            lea     VIA_Base,A0
+            tst.b   (VIA_IER-VIA_Base,A0)
+            tst.b   (VIA_IFR-VIA_Base,A0)
+            movea.l (SP)+,A0
+            rte
 MainTbl:
+            dc.w    $11
+            dc.b    $9
+            dc.b    $0
+            dc.b    $4
+            dc.b    $4C
+            dc.b    $B
+            dc.b    $50
+            dc.b    $F
+            dc.b    $0
+            dc.b    $C
+            dc.b    $A
+            dc.b    $D
+            dc.b    $0
+            dc.b    $E
+            dc.b    $1
+            dc.b    $3
+            dc.b    $C1
+            dc.b    $5
+            dc.b    $6A
 ResetTbl:
+            dc.w    $1
+            dc.b    $9
+            dc.b    $C0
 DefaultTbl:
+            dc.w    $7
+            dc.b    $F
+            dc.b    $8
+            dc.b    $1
+            dc.b    $1
+            dc.b    $0
+            dc.b    $10
+            dc.b    $9
+            dc.b    $8    
 LoopTbl:
+            dc.w    $3
+            dc.b    $E
+            dc.b    $11
+            dc.b    $5
+            dc.b    $68
 TimerTbl:
+            dc.w    $D
+            dc.b    $9
+            dc.b    $A
+            dc.b    12
+            dc.b    $FF
+            dc.b    13
+            dc.b    $FF
+            dc.b    14
+            dc.b    $3
+            dc.b    15
+            dc.b    $2
+            dc.b    $0
+            dc.b    $10
+            dc.b    $1
+            dc.b    $1
 regtests:
+            dc.b    $2
+            dc.b    $FF
+            dc.b    12
+            dc.b    $FF
+            dc.b    13
+            dc.b    $FF
+            dc.b    $F
+            dc.b    $FA
+            dc.b    $FF
+            dc.b    $FF
+bregtests:
+            dc.b    $2
+            dc.b    $0
+            dc.b    $C
+            dc.b    $FF
+            dc.b    $D
+            dc.b    $FF
+            dc.b    $F
+            dc.b    $FA
+            dc.b    $FF
+            dc.b    $FF
+ViaTest:

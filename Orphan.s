@@ -117,12 +117,6 @@ PRAMTest:
             org     $9026A6
 TestASC:
 
-            org     $902444
-ViaTest:
-
-            org     $90235A
-SccTimerTest:
-
             org     $904A98
 BootBeep:
 
