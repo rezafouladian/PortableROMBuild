@@ -12,6 +12,7 @@ PortableAbs EQU     0
             opt     o4-                             ; Prevent optimization from move.l to moveq
             opt     ol-
             opt     og-
+            opt     o11-
             ENDIF
 
             ; Add PC to JMP when matching original ROM
@@ -4114,14 +4115,14 @@ PlotMyIcon:
             rts
 PlotIcnN:
             link.w  A6,#0
-            movea.l (4,A6),A0
+            movea.l (8,A6),A0
             movea.l (A5),A1
             movea.l (A1),A1
-            move.l  #200020,-(SP)
+            move.l  #$200020,-(SP)
             clr.l   -(SP)
             move.w  #4,-(SP)
             move.l  A0,-(SP)
-            move.l  #200020,-(SP)
+            move.l  #$200020,-(SP)
             clr.l   -(SP)
             move.w  #4,-(SP)
             pea     ($80,A0)
@@ -4130,7 +4131,7 @@ PlotIcnN:
             pea     ($2,A1)
             pea     (-$8,A6)
             pea     (-$16,A6)
-            move.l  ($8,A6),-(SP)
+            move.l  ($C,A6),-(SP)
             _CopyMask
             adda.w  #$1C,SP
             unlk    A6
@@ -4177,7 +4178,7 @@ IGetWaitFlags:
             rts
 ISetWaitFlags:
             move.b  D0,-(SP)
-            jsr     GetRawTimeOut
+            jsp     GetRawTimeOut
             move.b  (SP)+,D1
             andi.b  #$E0,D1
             andi.b  #$1F,D0
