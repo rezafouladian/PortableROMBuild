@@ -11,6 +11,7 @@ PortableAbs EQU     0
             opt     o10-                            ; Prevent optimization from add/sub to lea
             opt     o4-                             ; Prevent optimization from move.l to moveq
             opt     ol-
+            opt     og-
             ENDIF
 
             ; Add PC to JMP when matching original ROM
@@ -3617,3 +3618,795 @@ LocalVIA1Int:
 TestSCSI:
             movea.l #SCSIrd,A0
             movea.l #SCSIwr,A1
+            move.b  #$80,(sICRwrite-SCSIwr,A1)
+            moveq   #0,D0
+            move.b  D0,(sICRwrite-SCSIwr,A1)
+            tst.b   (sReset-SCSIrd,A0)
+            moveq   #1,D6
+            move.b  #$80,(sICRwrite-SCSIwr,A1)
+            move.b  (sICRread-SCSIrd,A0),D1
+            cmpi.b  #$80,D1
+            bne.w   .Exit
+            addq.w  #1,D6
+            move.b  (sCSRread-SCSIrd,A0),D1
+            andi.b  #$80,D1
+            cmpi.b  #$80,D1
+            bne.w   .Exit
+            clr.b   (sICRwrite-SCSIwr,A1)
+            addq.w  #1,D6
+            move.l  A0,-(SP)
+            lea     VIA_Base,A0
+            tst.b   (VIA_IER-VIA_Base,A0)
+            tst.b   (VIA_IFR-VIA_Base,A0)
+            movea.l (SP)+,A0
+            move.b  #$10,(sICRwrite-SCSIwr,A1)
+            move.b  (sICRread-SCSIrd,A0),D1
+            cmpi.b  #$10,D1
+            bne.b   .Exit
+            addq.w  #1,D6
+            move.b  (sBSR-SCSI_Base,A0),D1
+            andi.b  #1,D1
+            cmpi.b  #1,D1
+            bne.b   .Exit
+            addq.w  #1,D6
+            move.b  #$8,(sICRwrite-SCSIwr,A1)
+            move.b  (sICRread-SCSIrd,A0),D1
+            cmpi.b  #$8,D1
+            bne.b   .Exit
+            addq.w  #1,D6
+            move.b  (sCSRread-SCSIrd,A0),D1
+            andi.b  #$40,D1
+            cmpi.b  #$40,D1
+            bne.b   .Exit
+            addq.w  #1,D6
+            move.b  #4,(sICRwrite-SCSIwr,A1)
+            move.b  (sICRread-SCSIrd,A0),D1
+            cmpi.b  #4,D1
+            bne.b   .Exit
+            addq.w  #1,D6
+            move.b  (sCSRread-SCSIrd,A0),D1
+            andi.b  #2,D1
+            cmpi.b  #2,D1
+            bne.b   .Exit
+            addq.w  #1,D6
+            move.b  #2,(sICRwrite-SCSIwr,A1)
+            move.b  (sICRread-SCSIrd,A0),D1
+            cmpi.b  #2,D1
+            bne.b   .Exit
+            addq.w  #1,D6
+            move.b  (sBSR-SCSIrd,A0),D1
+            andi.b  #2,D1
+            cmpi.b  #2,D1
+            bne.b   .Exit
+            moveq   #0,D6
+.Exit:
+            jmp     (A6)
+TestASC:
+            movem.l SP/A6-A0/D5-D0,-(SP)
+            move    SR,-(SP)
+            move    #$2700,SR
+            moveq   #0,D6
+            moveq   #0,D5
+            moveq   #0,D4
+            lea     Sound_Base,A0
+            lea     sndrnold,A2
+            lea     sndrdold,A3
+            move.b  #$1C,(ascVolControl-Sound_Base,A0)
+            move.b  (ascVolControl-Sound_Base,A0),D0
+            andi.b  #$1C,D0
+            bne.b   .GoTest
+            lea     sndrnnew,A2
+            lea     sndrdnew,A3
+.GoTest:
+            moveq   #0,D0
+            adda.w  #$800,A0
+.L1:
+            move.b  (A2)+,D0
+            beq.b   .Exit
+            move.b  (A3)+,D4
+            move.b  D4,(A0,D0.w)
+            move.b  (A0,D0.w),D5
+            cmpi.b  #2,D0
+            bne.b   .L2
+            andi.b  #$7F,D5
+.L2:
+            cmp.b   D4,D5
+            bne.b   .L3
+            bra.b   .L1
+.L3:
+            move.w  D0,D6
+.Exit:
+            bsr.b   snd_reg_init
+            move    (SP)+,SR
+            movem.l (SP)+,D0-D5/A0-A6/SP
+            jmp     (A6)
+snd_reg_init:
+            move.b  #1,(ascMode-Sound_Base,A0)
+            clr.b   (ascChipControl-Sound_Base,A0)
+            move.b  #$80,(ascFifoControl-Sound_Base,A0)
+            clr.b   (ascFifoControl-Sound_Base,A0)
+            tst.b   (ascFifoInt-Sound_Base,A0)
+            clr.b   (ascWaveOneShot-Sound_Base,A0)
+            clr.b   (ascVolControl-Sound_Base,A0)
+            clr.b   (ascClockRate-Sound_Base,A0)
+            clr.b   (ascTestReg-Sound_Base,A0)
+            rts
+sndrnnew:
+            dc.b    1,1,1,1
+            dc.b    2,2,2,2
+            dc.b    2,2,2,2
+            dc.b    2,2,2,2
+            dc.b    2,3,3,3
+            dc.b    4,4,4,4
+            dc.b    4,4,5,5
+            dc.b    5,5,5,5
+            dc.b    5,5,5,5
+            dc.b    5,5,7,7
+            dc.b    7,7,0,0
+sndrdnew:
+            dc.b    0,1,2,0
+            dc.b    0,1,2,4,8,$10,$1E,$1D,$1B,$17,$F,$1F,0
+            dc.b    0,$80,0
+            dc.b    0,1,2,4,8,0
+            dc.b    0,$80,1,2,4,8,7,$B,$D,$E,$F,0
+            dc.b    0,2,3,0
+sndrnold:
+            dc.b    1,1,1,1
+            dc.b    2,2,2,2
+            dc.b    2,3,3,3
+            dc.b    3,3,3,3
+            dc.b    3,3,4,4
+            dc.b    4,4,4,4
+            dc.b    5,5,5,5
+            dc.b    5,5,5,5
+            dc.b    5,5,5,5
+            dc.b    7,7,7,7
+            dc.b    0,0
+sndrdold:
+            dc.b    0,1,2,0
+            dc.b    0,1,2,3,0
+            dc.b    0,1,2,$80,3,$81,$82,$83,0		
+            dc.b    0,1,2,4,8,0 					
+            dc.b    0,$80,1,2,4,8,7,$B,$D,$E,$F,0	
+            dc.b    0,2,3,0
+PRAMTest:
+            moveq   #-1,D6
+            jmp     (A6)                            ; Return
+FindStartUpDevice:
+            bsr.w   EmbarkOnSearch
+            move.l  Ticks,-(SP)
+            bsr.w   LoadSCSIDrivers
+            bsr.w   WaitForInternal
+            bra.b   .FirstEntry
+.NextPass:
+            move.l  Ticks,D0
+            sub.l   (SP),D0
+            cmpi.l  #7200,D0
+            bls.b   .L1
+            lea     (-$10,SP),SP
+            lea     ($C,SP),A0
+            move.l  #sleepSig,(A0)
+            move.l  A0,(8,SP)
+            move.l  A0,(4,SP)
+            move.w  #4,(2,SP)
+            move.w  #sleepReq,(SP)
+            movea.l SP,A0
+            _PMgrOp
+            move.w  (A0),D0
+            lea     ($10,SP),SP
+            cmpi.w  #$70,D0
+            bne.b   .L3
+            movea.l ScrnBase,A0
+            move.l  ScreenBytes,D1
+            lsr.l   #2,D1
+            subq.w  #1,D1
+            moveq   #0,D0
+.L1:
+            move.l  D0,(A0)+
+            dbf     D1,.L1
+.L2:
+            bra.b   .L2
+.L3:
+            bsr.w   PlanStrategy
+            bsr.w   LoadSCSIDrivers
+.TryAgain:
+            bsr.w   VisualUpdate
+.FirstEntry:
+            bsr.w   FindNextCandidate
+            beq.b   .NextPass
+            bsr.w   SelectDevice
+            bsr.w   CheckMouseEject
+            beq.b   .TryAgain
+            bsr.w   GetStartUpInfo
+            beq.b   .GotIt
+            bsr.w   ReactToFailure
+            bra.b   .TryAgain
+.GotIt:
+            addq.l  #4,SP
+            bra.w   ShowSuccess
+GetDefaultStartup:
+            move.l  #4<<16|$78<<0,D0
+            _ReadXPRam
+            rts
+SetDefaultStartup:
+            move.l  #4<<16|$78<<0,D0
+            _WriteXPRam
+            rts
+InternalWait:
+            move.l  A0,D1
+            cmpi.w  #$9,D1
+            bhi.b   .Exit
+            lsl.w   #1,D1
+            lea     .JumpTable,A1
+            move.w  (A1,D1.w),D1
+            jsr     (A1,D1.w)
+.Exit:
+            rts
+.JumpTable:
+            dc.w    IGetTimeOut-.JumpTable
+            dc.w    ISetTimeOut-.JumpTable
+            dc.w    IGetWaitFlags-.JumpTable
+            dc.w    ISetWaitFlags-.JumpTable
+            dc.w    IDisableDynWait-.JumpTable
+            dc.w    IEnableDynWait-.JumpTable
+            dc.w    IDisablePermWait-.JumpTable
+            dc.w    IEnablePermWait-.JumpTable
+EmbarkOnSearch:
+            subq.l  #4,SP
+            movea.l SP,A0
+            _GetDefaultStartup
+            move.w  (SP)+,D3
+            move.w  (SP)+,D4
+            suba.l  A2,A2
+            lea     IsItFlopOrDef,A3
+            tst.w   D4
+            bne.b   .L1
+            lea     IsItAnything,A3
+.L1:
+            movea.l Ticks,A4
+            clr.w   D6
+            rts
+WaitForInternal:
+            movem.l A2/D5,-(SP)
+            _GetWaitFlags
+            andi.b  #$80,D0
+            bne.b   .RawExit
+            _GetTimeOut
+            bne.b   .UseGivenTime
+            move.w  #$140,D0
+.UseGivenTime:
+            mulu.w  #$3C,D0
+            move.l  D0,D5
+            _DisablePermWait
+.WaitForIt:
+            move.w  KeyMap+6,D0
+            cmpi.w  #CmdShiftOptDel,D0
+            beq.b   .RawExit
+            moveq   #0,D1
+            move.b  SCSIPoll,D1
+            andi.b  #7,D1
+            moveq   #0,D0
+            bset.l  D1,D0
+            move.l  A0,-(SP)
+            BigJsr  SCSILoad,A0
+            movea.l (SP)+,A0
+            beq.b   .Exit
+            suba.l  A2,A2
+            move.w  #$FFDF,D0
+            sub.w   D1,D0
+            move.w  D0,D1
+.FindIntHD:
+            bsr.w   NextDQEntry
+            beq.b   .EndOfQueue
+            cmp.w   ($8,A2),D1
+            bne.b   .FindIntHD
+            bra.b   .Exit
+.EndOfQueue:
+            cmp.l   Ticks,D5
+            bcs.b   .NoDrivePresent
+            moveq   #$F,D0
+            add.l   Ticks,D0
+.DelayLoop:
+            cmp.l   Ticks,D0
+            bcc.b   .DelayLoop
+            bra.b   .WaitForIt
+.NoDrivePresent:
+            _DisableDynWait
+.Exit:
+            _EnablePermWait
+.RawExit:
+            movem.l (SP)+,D5/A2
+            rts
+LoadSCSIDrivers:
+            moveq   #-1,D0
+            move.w  KeyMap+6,D1
+            cmpi.w  #CmdShiftOptDel,D1
+            bne.b   .GoLoadD
+            move.b  SCSIPoll,D1
+            andi.b  #7,D1
+            moveq   #-1,D0
+            bclr.l  D1,D0
+.GoLoadD:
+            move.l  A0,-(SP)
+            BigJsr  SCSILoad,A0
+            movea.l (SP)+,A0
+            rts
+PlanStrategy:
+            cmpi.w  #$FFFB,D4
+            beq.b   .Exit
+            lea     IsItAnything,A3
+.Exit:
+            rts
+FindNextCandidate:
+            bsr.w   NextDQEntry
+            beq.b   .DoneLooking
+            bsr.w   IsReject
+            beq.b   FindNextCandidate
+            jsr     (A3)
+            bne.b   FindNextCandidate
+.DoneLooking:
+            move.l  A2,D0
+            rts
+NextDQEntry:
+            move.l  A2,D0
+            bne.b   .L1
+            movea.l DrvQHdr+qHead,A2
+            bra.b   .Exit
+.L1:
+            movea.l (qLink,A2),A2
+.Exit:
+            move.l  A2,D0
+            rts
+SelectDevice:
+            lea     (-$400,A6),A0
+            move.w  (8,A2),D0
+            move.w  D0,($18,A0)
+            move.w  D0,BtDskRfn
+            move.w  (6,A2),D0
+            move.w  D0,($16,A0)
+            move.w  D0,BootDrive
+            rts
+CheckMouseEject:
+            tst.b   MBState
+            bmi.b   .DontEject
+            bsr.w   EjectMe
+.DontEject:
+            rts
+GetStartUpInfo:
+            move.w  #1,(ioPosMode,A0)
+            clr.l   (ioPosOffset,A0)
+            move.l  A6,($20,A0)
+            move.l  #$400,(ioByteCount,A0)
+            _Read
+            bne.b   .Exit
+            cmpi.w  #'LK',(A6)
+.Exit:
+            rts
+ReactToFailure:
+            cmpi.w  #offLinErr,D0
+            beq.b   .Exit
+            cmpi.w  #noDriveErr,D0
+            beq.b   .This1NoMo
+            bsr.w   EjectMe
+            beq.b   .ShowMe
+.This1NoMo
+            bsr.w   NeverAgain
+.ShowMe:
+            bsr.w   ShowDeviceFail
+.Exit:
+            rts
+VisualUpdate:
+            bset.l  #FlashEnable,D6
+            beq.b   .Exit
+            cmpa.l  Ticks,A4
+            bhi.b   .Exit
+            movea.l Ticks,A4
+            adda.w  #$3C,A4
+            bclr.l  #$A,D6
+            beq.b   .L1
+            move.b  #3,D6
+.L1:
+            bchg.l  #9,D6
+            bne.b   .L2
+            bsr.w   ShowPlainDisk
+            bra.b   .Exit
+.L2:
+            tst.b   D6
+            beq.b   .L3
+            bsr.w   ShowDiskX
+            subq.b  #1,D6
+            bra.b   .Exit
+.L3:
+            bsr.w   ShowDiskQ
+.Exit:
+            rts
+EnableXFlash:
+            bset.l  #$A,D6
+            rts
+ShowSuccess:
+            _HideCursor
+            movem.l A6-A5,-(SP)
+            BSR6    HappyMac
+            movem.l (SP)+,A5-A6
+            rts
+EjectMe:
+            lea     (MyIOPBA6,A6),A0
+            move.w  #EjectCode,(csCode,A0)
+            _Control
+            rts
+IsReject:
+            bsr.w   InBootMask
+            bne.b   .Exit
+            move.w  (6,A2),D1
+            move.w  BootMask,D0
+            btst.l  D1,D0
+.Exit:
+            rts
+IsItFlopOrDef:
+            cmp.w   (8,A2),D4
+            bne.b   IsItFloppy
+            cmpi.w  #-1,D3
+            beq.b   .Exit
+            cmp.w   (6,A2),D3
+            bne.b   IsItFloppy
+.Exit:
+            rts
+IsItFloppy:
+            cmpi.w  #FloppyRefNum,(dqRefNum,A2)
+            rts
+IsItAnything:
+            cmp.w   D0,D0
+            rts
+NeverAgain:
+            bsr.w   InBootMask
+            bne.b   .Exit
+            move.w  (6,A2),D1
+            move.w  BootMask,D0
+            bclr.l  D1,D0
+            move.w  D0,BootMask
+.Exit:
+            rts
+InBootMask:
+            tst.w   ($6,A2)
+            bmi.b   .Exit
+            cmpi.w  #$F,(6,A2)
+            bhi.b   .Exit
+            moveq   #0,D0
+.Exit:
+            rts
+ShowDeviceFail:
+            bsr.w   IsItFloppy
+            bne.b   .Exit
+            bsr.w   EnableXFlash
+.Exit:
+            rts
+HappyMac:
+            bsr.w   EraseMyIcon
+            lea     HappyIcon,A0
+            jsp     PlotMyIcon
+            jmp     (A6)
+ShowPlainDisk:
+            lea     DiskIcon,A0
+            jpp     PlotMyIcon
+ShowDiskQ:
+            lea     QDiskIcon,A0
+            jpp     PlotMyIcon
+ShowDiskX:
+            lea     XDiskIcon,A0
+            jpp     PlotMyIcon
+EraseMyIcon:
+            movem.l A1-A0/D2-D0,-(SP)
+            bsr.w   PSHIcnRect
+            move.l  SP,-(SP)
+            movea.l (A5),A0
+            pea     (-$18,A0)
+            _FillRect
+            addq.w  #8,SP
+            movem.l (SP)+,D0-D2/A0-A1
+            rts
+PlotMyIcon:
+            move.l  A0,-(SP)
+            bsr.w   PSHIcnRect
+            move.l  SP,-(SP)
+            move.l  ($C,SP),-(SP)
+            bsr.w   PlotIcnN
+            adda.w  #$C,SP
+            rts
+PlotIcnN:
+            link.w  A6,#0
+            movea.l (4,A6),A0
+            movea.l (A5),A1
+            movea.l (A1),A1
+            move.l  #200020,-(SP)
+            clr.l   -(SP)
+            move.w  #4,-(SP)
+            move.l  A0,-(SP)
+            move.l  #200020,-(SP)
+            clr.l   -(SP)
+            move.w  #4,-(SP)
+            pea     ($80,A0)
+            pea     (-$E,A6)
+            pea     (-$1C,A6)
+            pea     ($2,A1)
+            pea     (-$8,A6)
+            pea     (-$16,A6)
+            move.l  ($8,A6),-(SP)
+            _CopyMask
+            adda.w  #$1C,SP
+            unlk    A6
+            movea.l (SP)+,A0
+            addq.w  #8,SP
+            jmp     (A0)
+PSHIcnRect:
+            move.l  #$200020,-(SP)
+            clr.l   -(SP)
+            movea.l (A5),A0
+            pea     (-$74,A0)
+            pea     ($4,SP)
+            bsr.w   CenterRect
+            movea.l ($8,SP),A0
+            move.l  ($4,SP),($8,SP)
+            move.l  (SP)+,(SP)
+            jmp     (A0)
+HappyIcon:
+            incbin  'HappyIcon.bin'
+DiskIcon:
+            incbin  'DiskIcon.bin'
+QDiskIcon:
+            incbin  'QDiskIcon.bin'
+XDiskIcon:
+            incbin  'XDiskIcon.bin'
+IGetTimeOut:
+            jsp     GetRawTimeOut
+            andi.b  #$1F,D0
+            rts
+ISetTimeOut:
+            move.b  D0,-(SP)
+            jsp     GetRawTimeOut
+            move.b  (SP)+,D1
+            cmpi.b  #$1F,D1
+            bls.b   .L1
+            move.b  #$1F,D1
+.L1:
+            andi.b  #$E0,D0
+            or.b    D1,D0
+            jpp     SetRawTimeOut
+IGetWaitFlags:
+            jsp     GetRawTimeOut
+            andi.b  #$E0,D0
+            rts
+ISetWaitFlags:
+            move.b  D0,-(SP)
+            jsr     GetRawTimeOut
+            move.b  (SP)+,D1
+            andi.b  #$E0,D1
+            andi.b  #$1F,D0
+            or.b    D1,D0
+            jpp     SetRawTimeOut
+IDisableDynWait:
+            _GetWaitFlags
+            bset.l  #7,D0
+            _SetWaitFlags
+            rts
+IEnableDynWait:
+            _GetWaitFlags
+            bclr.l  #7,D0
+            _SetWaitFlags
+            rts
+IDisablePermWait
+            _GetWaitFlags
+            bset.l  #6,D0
+            _SetWaitFlags
+            rts
+IEnablePermWait:
+            _GetWaitFlags
+            bclr.l  #6,D0
+            _SetWaitFlags
+            rts
+GetRawTimeOut:
+            clr.b   -(SP)
+            movea.l SP,A0
+            move.l  #1<<16|1<<0,D0
+            _ReadXPRam
+            moveq   #0,D0
+            move.b  (SP)+,D0
+            rts
+SetRawTimeOut:
+            move.b  D0,-(SP)
+            movea.l SP,A0
+            move.l  #1<<16|1<<0,D0
+            _WriteXPRam
+            move.b  (SP)+,D0
+            rts
+BootMe:
+            bsr.w   FindStartUpDevice
+            movea.l SysZone,A0
+            move.l  A0,TheZone
+            move.l  A0,ApplZone
+            move.l  (bkLim,A0),HeapEnd
+            move.b  ($6,A6),D1
+            cmpi.b  #BBOldExecVers,D1
+            beq.b   .L1
+            andi.b  #MyExecMask,D1
+            cmpi.b  #MyExecMask,D1
+            bne.b   .L2
+.L1:
+            jsr     ($2,A6)
+.L2:
+            move.w  ($7C,A6),D0
+            _InitEvents
+            move.w  ($7A,A6),D0
+            _InitFS
+            lea     (MyIOPBA6,A6),A0
+
+            org     $903494
+CenterRect:
+            org     $9034C6
+MouseInit:
+            org     $903510
+InitEvents:
+            org     $90353A
+CritErr:
+            org     $903644
+PutSymbol:
+            org     $903654
+PutIcon:
+            org     $90371E
+SysErrInit:
+            org     $90379E
+DebugProlog:
+            org     $9037B0
+ToDeepShit:
+            org     $90380A
+IRQException:
+            org     $903822
+SysErr2:
+            org     $90386C
+AllocFakeRgns:
+            org     $9038BA
+DSErrorHandler:
+            org     $903C78
+DbgCmd_DM:
+            org     $903CF4
+DbgCmd_SM:
+            org     $903D1E
+DbgCmd_TD:
+            move.l  #$C30,MacsBugDMnext
+            bra.w   DbgCmd_DM
+DbgCmd_D_at:
+
+            org     $903EA6
+SizeMemory:
+            movea.l A6,A4                           ; Save the return address
+            move.l  D0,D2
+            movea.l #MaxRAMSize-SlimSpaceSize,A3    ; Load our installed memory size, leaving room for SLIM cards
+            moveq   #1<<SlimInstalled,D0            ; Load SLIM adapter installed bit to check
+            and.w   AccessBase,D0                   ; Is a SLIM card adapter installed?
+            bne.b   .L1                             ; Yes, do not test its range
+            adda.l  #SlimSpaceSize,A3               ; No, free to use for RAM
+.L1:
+            suba.l  A0,A0                           ; Start at the beginning of RAM
+.L2:
+            move.l  (A0),D0                         ; Save the beginning of RAM
+            move.l  #$1E0FBB22,(A0)                 ; Load our test pattern
+            lea     .Pattern,A1
+            move.l  (A1),D1
+            move.l  (A1),D1
+            bra.b   .L3
+.Pattern:
+            dc.l    $FFFFFFFF
+.L3:
+            cmpi.l  #$1E0FBB22,(A0)
+            beq.b   .L4
+            adda.l  #$100000,A0                     ;
+            cmpa.l  A3,A0                           ;
+            bne.b   .L2
+            bra.w   Error1Handler
+.L4:
+            cmpi.l  #$22BBF0E1,D2                   ; Should we test the memory?
+            bne.b   .L6
+            movea.l A0,A1
+            adda.w  #$400,A1                        ; Start past the end of our vectors
+            movea.l A1,SP
+            moveq   #0,D6
+            BSR6    Mod3Test
+            tst.l   D6
+            bne.w   Error1Handler
+.L6:
+            move.l  A3,D0
+            subi.l  #$100000,D0
+.L7:
+            movea.l D0,A0
+            swap    D0
+            move.w  D0,D1
+            swap    D1
+            move.w  D0,D1
+            move.l  (A0),-(SP)
+            move.l  D1,(A0)
+            move.l  D1,(A0)
+            swap    D0
+            subi.l  #$100000,D0
+            cmpi.l  #0,D0
+            bne.b   .L7
+            move.l  ResetStackPtr,-(SP)
+            clr.l   ResetStackPtr
+            move.l  SP,D6
+            subi.l  #$80,D6
+            movea.l D6,A1
+            movea.l A1,A2
+            clr.b   D3
+            moveq   #0,D0
+.L8:
+            movea.l D0,A0
+            swap    D0
+            move.w  D0,D1
+            swap    D1
+            move.w  D0,D1
+            move.l  #$FFFFFFFF,MonkeyLives
+            move.l  #$FFFFFFFF,MonkeyLives
+            move.l  (A0),D2
+            cmp.w   D1,D2
+            beq.b   .L9
+            swap    D1
+            swap    D2
+            cmp.w   D1,D2
+            bne.b   .L11
+.L9:
+            tst.b   D3
+            bne.b   .L10
+            moveq   #-1,D3
+            move.l  A0,(A2)+
+            clr.l   (A2)
+.L10:
+            addi.l  #$100000,(A2)
+            bra.b   .L12
+.L11:
+            tst.b   D3
+            beq.b   .L12
+            clr.b   D3
+            addq.l  #4,A2
+.L12:
+            addi.w  #$10,D0
+            swap    D0
+            cmp.l   A3,D0
+            beq.b   .L13
+            bra.b   .L8
+.L13:
+            tst.b   D3
+            beq.b   .L14
+            addq.l  #4,A2
+.L14:
+            move.l  #$FFFFFFFF,(A2)
+            move.l  (4,A1),D6
+            suba.l  A0,A0
+.L15:
+            move.l  (SP)+,(A0)
+            adda.l  #$100000,A0
+            cmpa.l  A3,A0
+            bne.b   .L15
+            movea.l A4,A6                           ; Restore return address
+            jpp     .Exit
+.Exit:
+            jmp     (A6)                            ; Restore return address
+
+            org     $904014
+PMGRrecv:
+            moveq   #0,D1
+PMGRsend:
+            move.l  A0,-(SP)
+            move.l  A0,-(SP)
+            move.w  D1,-(SP)
+            move.w  D0,-(SP)
+            movea.l SP,A0
+            _PMgrOp
+            lea     ($8,SP),SP
+            movea.l (SP)+,A0
+            rts
+PMgrInt:
+            subq.w  #4,SP
+            movea.l SP,A0
+            moveq   #$78,D0
+            bsr.b   PMGRrecv
+            move.b  (A0),D1
+            addq.w  #4,SP
+            tst.w   D0

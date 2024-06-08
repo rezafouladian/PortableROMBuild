@@ -186,3 +186,33 @@ Err1            EQU         Err2+2
 Error           EQU         Err1+2
 GSize           EQU         Error+2
 TotalSize       EQU         GSize+8
+
+MaxRAMSize      EQU         $900000
+SlimSpaceSize   EQU         $400000
+
+SlimInstalled   EQU         3
+
+CmdShiftOptDel  EQU         $8805
+
+qHead           EQU         2
+qLink           EQU         0
+
+dqRefNum        EQU         $8
+
+ioPosMode       EQU         $2C
+ioPosOffset     EQU         $2E
+ioBuffer        EQU         $20
+ioByteCount     EQU         $24
+
+noDriveErr      EQU         -64
+offLinErr       EQU         -65
+
+FlashEnable     EQU         8
+MyIOPBA6        EQU         -$400
+EjectCode       EQU         7
+csCode          EQU         $1A
+FloppyRefNum    EQU         -5
+BBNewMask       EQU         $80
+BBExecMask      EQU         $40
+MyExecMask      EQU         BBNewMask+BBExecMask
+BBOldExecVers   EQU         'D'

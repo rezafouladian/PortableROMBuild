@@ -106,8 +106,14 @@ MMDefFlags      EQU         $326
 SysMap          EQU         $A58
 TopMapHndl      EQU         $A50
 ResetStackPtr   EQU         $0
-
-
+MonkeyLives     EQU         $100
+KeyMap          EQU         $174
+SCSIPoll        EQU         $C2F
+DrvQHdr         EQU         $308
+BtDskRfn        EQU         $B34
+BootDrive       EQU         $210
+BootMask        EQU         $B0E
+MacsBugDMnext   EQU         $CAC
 
 
 VIA_Base        EQU         $F70000
@@ -152,6 +158,8 @@ sMRwrite        EQU         $F90021
 sTCRwrite       EQU         $F90031
 sCSRread        EQU         $F90040
 sCSRwrite       EQU         $F90041
+sReset          EQU         $F90070
+sBSR            EQU         $F90050
 
 DiagROM         EQU         $F80000
 DiagROM1        EQU         $F80080
@@ -160,6 +168,13 @@ Video_Base      EQU         $FA8000
 
 Sound_Base      EQU         $FB0000
 ascMode         EQU         $FB0801
+ascChipControl  EQU         $FB0802
+ascFifoControl  EQU         $FB0803
 ascFifoInt      EQU         $FB0804
+ascWaveOneShot  EQU         $FB0805
+ascVolControl   EQU         $FB0806
+ascClockRate    EQU         $FB0807
+ascTestReg      EQU         $FB080F
 
 MapperBase      EQU         $FC0000
+AccessBase      EQU         $FC0200

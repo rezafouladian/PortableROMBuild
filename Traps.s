@@ -1,7 +1,15 @@
     macro _Open
         dc.w    $A000
     endm
+
+    macro _Read
+        dc.w    $A002
+    endm
     
+    macro _Control
+        dc.w    $A004
+    endm
+
     macro _InitZone
         dc.w    $A019
     endm
@@ -38,6 +46,18 @@
         dc.w    $A057
     endm
 
+    macro _InitFS
+        dc.w    $A06C
+    endm
+
+    macro _InitEvents
+        dc.w    $A06D
+    endm
+    
+    macro _GetDefaultStartup
+        dc.w    $A07D
+    endm
+
     macro _PMgrOp
         dc.w    $A085
     endm
@@ -54,8 +74,16 @@
         dc.w    $A71E
     endm
 
+    macro _CopyMask
+        dc.w    $A817
+    endm
+
     macro _SetCursor
         dc.w    $A851
+    endm
+
+    macro _HideCursor
+        dc.w    $A852
     endm
 
     macro _InitGraf
@@ -108,6 +136,16 @@
 
     macro _InternalWait
         dc.w    $A07F
+    endm
+
+    macro _GetTimeOut
+        suba.l A0,A0
+        _InternalWait
+    endm
+
+    macro _SetTimeOut
+        movea.w #1,A0
+        _InternalWait
     endm
 
     macro _GetWaitFlags

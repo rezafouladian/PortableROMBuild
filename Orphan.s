@@ -18,13 +18,7 @@ WakeUp:
             move    #$2700,SR
             movea.l PowerMgrVars,A2
 
-            
-
-
-
-            org     $90371E
-SysErrInit:
-            suba.l  A0,A0
+        
 
 
 
@@ -38,9 +32,6 @@ NMInit:
             org     $90613A
 InitTimeMgr:
 
-
-            org     $90353A
-CritErr:
 
             org     $909920
 DoEject:
@@ -61,8 +52,6 @@ InitADB:
             org     $916E4C
 InitGestalt:
 
-            org     $903060
-BootMe:
 
             org     $904080
 BatInt:
@@ -75,9 +64,6 @@ SndWatch:
 
             org     $9040A0
 BatWatch:
-
-            org     $90402A
-PMgrInt:
 
             org     $905C42
 ADBProc:
@@ -105,19 +91,11 @@ ErrorBeep4:
             lea     $904C28,A4
 DoBeep:
 
-
-
-            org     $9027DE
-PRAMTest:
-
-            org     $9026A6
-TestASC:
-
             org     $904A98
 BootBeep:
 
-            org     $903EA6
-SizeMemory:
+            org     $907316
+SCSILoad:
 
 
             org     $9269CC
