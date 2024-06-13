@@ -46,6 +46,14 @@
         dc.w    $A057
     endm
 
+    macro _NMInstall
+        dc.w    $A05E
+    endm
+
+    macro _NMRemove
+        dc.w    $A05F
+    endm
+
     macro _InitFS
         dc.w    $A06C
     endm

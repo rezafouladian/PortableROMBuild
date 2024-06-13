@@ -1836,9 +1836,9 @@ getCmd:
             moveq   #4,D2
             BSR6    GetNBytes
             movea.l D1,A3
-            move.b  #$2A,D0
+            move.b  #'*',D0
             BSR6    SendString
-            move.b  #$47,D0
+            move.b  #'G',D0
             BSR6    SendString
             bset.l  #crlf,D7
             moveq   #0,D2
@@ -1923,12 +1923,12 @@ getCmd:
             bra.w   EchoCmd
 .HEXMode:
             cmpi.b  #'H',D5
-            bne.b   .SendResults
+            bne.b   .SendResults                    ; No, go to the next command
             bclr.l  #aski,D7
             bra.w   EchoCmd
 .SendResults:
             cmpi.b  #'R',D5
-            bne.b   .MemDump
+            bne.b   .MemDump                        ; No, go to the next command
             bclr.l  #crlf,D7
             move.l  D6,D0
             moveq   #4,D2
@@ -2135,7 +2135,7 @@ getCmd:
             lea     EchoCmd_End,A6
             jpp     SendString
 EchoCmd:
-            move.b  #$2A,D0
+            move.b  #'*',D0
             BSR6    SendString
             swap    D5
             move.b  D5,D0
@@ -4411,3 +4411,306 @@ PMgrInt:
             move.b  (A0),D1
             addq.w  #4,SP
             tst.w   D0
+            bne.b   .L1
+            btst.l  #0,D1
+            bne.b   .L2
+            btst.l  #1,D1
+            bne.b   .L3
+            btst.l  #2,D1
+            bne.b   .L4
+.L1:
+            rts
+.L2:
+            move.b (Lvl1DT+8),D0
+            beq.b   .L1
+            movea.l D0,A0
+            jmp     (A0)
+.L3:
+            movea.l PowerMgrVars,A0
+            move.l  (vBatInt,A0),D0
+            beq.b   .L1
+            movea.l D0,A0
+            jmp     (A0)
+.L4:
+            movea.l PowerMgrVars,A0
+            move.l  (vEnvInt,A0),D0
+            beq.b   .L1
+            movea.l D0,A0
+            jmp     (A0)
+EnvInt:
+            subq.w  #4,SP
+            movea.l SP,A0
+            moveq   #batteryRead,D0
+            bsr.b   PMGRrecv
+            addq.w  #4,SP
+            rts
+BatInt:
+            movea.l PowerMgrVars,A2
+            subq.w  #4,SP
+            movea.l SP,A0
+            moveq   #batteryRead,D0
+            bsr.b   PMGRrecv
+            move.b  (A0),(Charger,A2)
+            addq.w  #4,SP
+            btst.b  #ChrgState,(Charger,A2)
+            beq.b   .Exit
+            st      (TOdirtyFlag,A2)
+.Exit:
+            rts
+BatWatch:
+            movea.l PowerMgrVars,A2
+            tst.b   (SysTaskFlag,A2)
+            bne.b   .didsystask
+            lea     (BatVBLTask,A2),A0
+            move.w  #BatFreq,(vblCount,A0)
+            rts
+.didsystask:
+            bsr.w   GetLevel
+            bne.b   .valid
+            move.b  #-1,(LastLevel,A2)              ; Reset last level
+            bra.b   .BatWatchOut
+.valid:
+            tst.b   D0
+            bpl.b   .positive
+            bsr.b   RemoveMsg
+            move.b  D0,(LastLevel,A2)
+            bra.b   .BatWatchOut
+.positive:
+            beq.b   .lesser
+            tst.b   (LastLevel,A2)
+            bmi.b   .lpowermode
+            cmp.b   (LastLevel,A2),D0
+            bls.b   .lesser
+.lpowermode:
+            bsr.b   RemoveMsg
+            bsr.b   InstallMsg
+            clr.b   (Level4Cnt,A2)
+            move.b  D0,(LastLevel,A2)
+            bra.b   .BatWatchOut
+.lesser:
+            cmpi.b  #4,(LastLevel,A2)
+            bne.b   .BatWatchOut
+            addq.b  #1,(LastLevel,A2)
+.BatWatchOut:
+            lea     (BatVBLTask,A2),A0
+            move.w  #BatFreq,(vblCount,A0)
+            tst.b   (TOdirtyFlag,A2)
+            beq.b   .Exit
+            clr.b   (TOdirtyFlag,A2)
+            lea     Scratch20,A0
+            move.l  #8<<16|$70<<0,D0
+            _ReadXPRam
+            move.b  ($7,A0),(SleepFlags,A2)
+            move.w  (A0),(A2)
+            _IdleUpdate
+.Exit:
+            rts
+RemoveMsg:
+            tst.b   (lpMSGvalid,A2)
+            beq.b   .nomsg
+            move.l  D0,-(SP)
+            lea     (BNmQEntry,A2),A0
+            _NMRemove
+            move.l  (SP)+,D0
+            clr.b   (lpMSGvalid,A2)
+.nomsg:
+            rts
+InstallMsg:
+            move.l  D0,-(SP)
+            lea     (BNmQEntry,A2),A0
+            move.w  #8,(4,A0)
+            moveq   #-1,D2
+            move.l  D2,(14,A0)
+            moveq   #0,D2
+            move.w  D2,($E,A0)
+            lea     .nmproc,A1
+            move.l  A1,($1C,A0)
+            move.l  ($6E,A2),($10,A0)
+            move.w  D0,D2
+            subq.w  #1,D2
+            lsl.w   #2,D2
+            move.l  ($72,A2,D2.w),($18,A0)
+            _NMInstall
+            move.l  (SP)+,D0
+            st      (lpMSGvalid,A2)
+.nmproc:
+            rts
+GetLevel:
+            subq.w  #4,SP
+            movea.l SP,A0
+            moveq   #batteryNow,D0
+            bsr.w   PMGRrecv
+            moveq   #0,D3
+            move.b  (A0)+,(Charger,A2)
+            move.b  (A0),D3
+            addq.w  #4,SP
+            btst.b  #ChrgState,(Charger,A2)
+            beq.b   .ChargeSame
+            st      (TOdirtyFlag,A2)
+.ChargeSame:
+            subq.b  #1,(BatQIndex,A2)
+            bpl.b   .IndexOK
+            move.b  #7,(BatQIndex,A2)
+.IndexOK:
+            moveq   #0,D0
+            move.b  (BatQIndex,A2),D0
+            move.b  D3,(BatQ,A2,D0.w)
+            tst.b   (BatQ,A2)
+            beq.b   GetLevel
+            moveq   #0,D3
+            move.b  (BatQ,A2),D0
+            add.w   D0,D3
+            move.b  (BatQ+1,A2),D0
+            add.w   D0,D3
+            move.b  (BatQ+2,A2),D0
+            add.w   D0,D3
+            move.b  (BatQ+3,A2),D0
+            add.w   D0,D3
+            move.b  (BatQ+4,A2),D0
+            add.w   D0,D3
+            move.b  (BatQ+5,A2),D0
+            add.w   D0,D3
+            move.b  (BatQ+6,A2),D0
+            add.w   D0,D3
+            move.b  (BatQ+7,A2),D0
+            add.w   D0,D3
+            lsr.w   #1,D3
+            moveq   #0,D2
+            move.b  (LowWarn,A2),D2
+            moveq   #0,D1
+            move.b  (Cutoff,A2),D1
+            sub.w   D1,D2
+            asl.w   #2,D1
+            moveq   #4,D0
+            add.w   D2,D1
+            cmp.w   D1,D3
+            bls.b   .foundLevel
+            moveq   #3,D0
+            add.w   D2,D1
+            cmp.w   D1,D3
+            bls.b   .foundLevel
+            moveq   #2,D0
+            add.w   D2,D1
+            cmp.w   D1,D3
+            bls.b   .foundLevel
+            moveq   #1,D0
+            add.w   D2,D1
+            cmp.w   D1,D3
+            bls.b   .foundLevel
+            moveq   #0,D0
+            add.w   D2,D1
+            add.w   D2,D1
+            cmp.w   D1,D3
+            bls.b   .foundLevel
+            moveq   #-1,D0
+.foundLevel:
+            lsr.w   #2,D3
+            move.b  D3,(BatAvg,A2)
+            tst.b   (BatQ,A2)
+            rts
+SndWatch:
+            movea.l PowerMgrVars,A2
+            lea     (SwVBLTask,A2),A0
+            move.w  #SndWFreq,(vblCount,A0)
+            subq.w  #4,SP
+            movea.l SP,A0
+            move.w  #soundRead,D0
+            bsr.w   PMGRrecv
+            move.b  (A0),D2
+            beq.b   .Exit
+            btst.l  #1,D2
+            bne.b   .ClearLatch
+            clr.b   (A0)
+            moveq   #1,D1
+            move.w  #soundSet,D0
+            bsr.w   PMGRsend
+            bra.b   .Exit
+.ClearLatch:
+            move.b  #sndOnClrLtch,(A0)
+            moveq   #1,D1
+            move.w  #soundSet,D0
+            bsr.w   PMGRsend
+            _IdleUpdate
+.Exit:
+            addq.w  #4,SP
+            rts
+PMgrOp:
+            andi.w  #$600,D1
+            beq.b   .L13
+            cmpi.w  #$400,D1
+            beq.b   .IdleEnableDisable
+            bcs.b   .IdleUpdate
+            bra.b   .L3
+.IdleEnableDisable:
+            move    SR,-(SP)
+            ori     #$300,SR
+            move.l  D0,D1
+            movea.l PowerMgrVars,A1
+            moveq   #0,D0
+            tst.l   D1
+            bpl.b   .L1
+            move.b  (SaveSpeedo,A1),D0
+            move    (SP)+,SR
+            rts
+.L1:
+            bne.b   .L2
+            subq.b  #1,(IdleFlagCnt,A1)
+            bpl.b   .DontClr
+            clr.b   (IdleFlagCnt,A1)
+            bra.b   .DontClr
+.L2:
+            addq.b  #1,(IdleFlagCnt,A1)
+.DontClr:
+            move.b  (IdleFlagCnt,A1),D0
+            move    (SP)+,SR
+            rts
+.IdleUpdate:
+            move    SR,-(SP)
+            ori     #$300,SR
+            tst.w   Clock16M
+            movea.l PowerMgrVars,A1
+            move.l  (LastAct,A1),D0
+            cmp.l   Ticks,D0
+            bhi.b   .noLastActUpdate
+            move.l  Ticks,(LastAct,A1)
+.noLastActUpdate:
+            move.b  #CPUSpeed16MHz,(SaveSpeedo,A1)
+            move.l  (LastAct,A1),D0
+            move    (SP)+,SR
+            rts
+.L3:
+            bclr.l  #7,D0
+            bne.w   .L7
+            move.w  D0,D1
+            moveq   #0,D2
+            moveq   #0,D3
+            moveq   #0,D4
+            lea     (-$10,SP),SP
+            lea     ($C,SP),A0
+            move.l  A0,($8,SP)
+            move.l  A0,($4,SP)
+            bclr.l  #0,D1
+            bne.b   .L4
+            move.w  #modemRead,(SP)
+            clr.w   ($2,SP)
+            movea.l SP,A0
+            _PMgrOp
+            move.b  ($C,A0),D3
+            btst.l  #3,D3
+            beq.b   .L4
+            move.l  #1<<16|PmgrPramBase+7<<0,D0
+            _ReadXPRam
+            btst.b  #2,(A0)
+            bne.b   .L4
+            move.b  D3,D0
+            andi.b  #2,D0
+            lsl.b   #1,D0
+            cmp.b   D0,D1
+            beq.b   .L5
+.L4:
+            ori.b   #$90,D2
+            moveq   #0,D3
+.L5:
+
+
+

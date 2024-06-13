@@ -53,18 +53,6 @@ InitADB:
 InitGestalt:
 
 
-            org     $904080
-BatInt:
-
-            org     $904074
-EnvInt:
-
-            org     $90422E
-SndWatch:
-
-            org     $9040A0
-BatWatch:
-
             org     $905C42
 ADBProc:
 

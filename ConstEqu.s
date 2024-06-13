@@ -16,9 +16,13 @@ pMgrADBoff      EQU         $21                     ; Turn ADB auto-poll off
 xPramWrite      EQU         $32
 timeRead        EQU         $38                     ; Read the time from the clock chip
 xPramRead       EQU         $3A                     ; Read extended PRAM
+modemRead       EQU         $58
 batteryRead     EQU         $68
+batteryNow      EQU         $69
 readINT         EQU         $78                     ; Get Power Manager interrupt data
 sleepReq        EQU         $7F
+soundSet        EQU         $90
+soundRead       EQU         $98                     ; Read sound power state
 PmgrSelfTest    EQU         $EC                     ; Run Power Manager self test
 
 pIWM            EQU         0                       ; IWM power
@@ -30,26 +34,46 @@ pASC            EQU         5                       ; Sound power
 pMinus5V        EQU         6
 pTurnOn         EQU         7
 
+ChrgState       EQU         5
+
+soundOff        EQU         0
+soundOn         EQU         1
+sndClrLtch      EQU         2
+sndOnClrLtch    EQU         3
+
 bkLim           EQU         $0                      ; Last block in zone [pointer}
 
 SysZoneSize     EQU         $1800                   ; Default System Zone size
 
 dfltMasters     EQU         32
 
+vblCount        EQU         $A
+
 SleepTime       EQU         $0                      ; Copies of sleep timeout values
 HDTime          EQU         $1                      ; Hard disk timeout
 SleepQHdr       EQU         $2                      ; Sleep queue header
 SlpQFlags       EQU         $2                      ; Sleep queue flags
 SlpQHead        EQU         $4                      ; First sleep queue entry
+SysTaskFlag     EQU         $C                      ; System task has been called flag
+LastLevel       EQU         $D                      ; Previous normalized power level
 SaveSpeedo      EQU         $E                      ; Current CPU speed
+Charger         EQU         $F                      ; Charger status flag
+SleepFlags      EQU         $10                     ; Misc status flags
 TOdirtyFlag     EQU         $11                     ; Timeouts are dirtry flag
 LastAct         EQU         $1A                     ; Last user activity
 LastHd          EQU         $1E                     ; Last hard disk activity
 LowWarn         EQU         $22                     ; Low power warning threshold
 Cutoff          EQU         $23                     ; Power manager cutoff voltage
+BNmQEntry       EQU         $24                     ; Low power alert
+BatQ            EQU         $48                     ; Battery level circular index
+lpMSGvalid      EQU         $50                     ; Low power message pending flag
+IdleFlagCnt     EQU         $51                     ; Idle flag set/clear counter
+BatAvg          EQU         $52                     ; Average of BatQ
 NTSCcopy        EQU         $53                     ; Copy of NTSC byte, only used from restart to DrawBeepScreen
+BatQIndex       EQU         $5F                     ; Index into circular battery averaging queue
 vBatInt         EQU         $64                     ; Vector to battery interrupt handler
 vEnvInt         EQU         $68                     ; Vector to environment interrupt handler
+Level4Cnt       EQU         $6D
 BatVBLTask      EQU         $82                     ; Battery monitor VBL task
 SwVBLTask       EQU         $90                     ; Sound Watch (SndWatch) VBL task
 
