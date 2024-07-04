@@ -115,6 +115,7 @@ BootDrive       EQU         $210
 BootMask        EQU         $B0E
 MacsBugDMnext   EQU         $CAC
 Scratch20       EQU         $1E4
+PortAUse        EQU         $290
 
 
 VIA_Base        EQU         $F70000

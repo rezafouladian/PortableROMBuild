@@ -30,6 +30,10 @@
         dc.w    $A034
     endm
 
+    macro _Delay
+        dc.w    $A03B
+    endm
+
     macro _InitUtil
         dc.w    $A03F
     endm

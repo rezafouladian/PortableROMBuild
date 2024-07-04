@@ -4636,7 +4636,7 @@ SndWatch:
             rts
 PMgrOp:
             andi.w  #$600,D1
-            beq.b   .L13
+            beq.w   .L13
             cmpi.w  #$400,D1
             beq.b   .IdleEnableDisable
             bcs.b   .IdleUpdate
@@ -4711,6 +4711,121 @@ PMgrOp:
             ori.b   #$90,D2
             moveq   #0,D3
 .L5:
-
-
+            ori.b   #$C2,D2
+            move.w  #$10,(SP)
+            move.w  #1,($2,SP)
+            move.b  D2,($C,SP)
+            movea.l SP,A0
+            _PMgrOp
+            tst.b   D3
+            beq.b   .L6
+            moveq   #8,D0
+            movea.l D0,A0
+            _Delay
+            move.b  #$88,($C,SP)
+            move.w  #1,($2,SP)
+            move.w  #powerCntl,(SP)
+            movea.l SP,A0
+            _PMgrOp
+.L6:
+            lea     ($10,SP),SP
+            moveq   #0,D0
+            rts
+.L7:
+            andi.w  #4,D0
+            move.w  D0,D1
+            moveq   #0,D2
+            lea     (-$10,SP),SP
+            lea     ($C,SP),A0
+            move.l  A0,($8,SP)
+            move.l  A0,($4,SP)
+            move.w  #modemRead,(SP)
+            clr.w   ($2,SP)
+            movea.l SP,A0
+            _PMgrOp
+            move.b  ($C,A0),D3
+            lea     PortAUse,A1
+            tst.b   D1
+            beq.b   .L8
+            tst.b   (A1)+
+.L8:
+            tst.b   (A1)
+            bmi.b   .L9
+            btst.l  #0,D3
+            beq.b   .L12
+            andi.b  #$2,D3
+            lsl.b   #1,D3
+            cmp.b   D3,D1
+            beq.b   .L10
+            move.b  #$10,D2
+            bra.b   .L11
+.L9:
+            move.b  #$52,D2
+            move.b  ($C,A0),D3
+            btst.l  #0,D3
+            beq.b   .L11
+.L10:
+            move.b  #8,($C,SP)
+            move.w  #1,($2,SP)
+            move.w  #powerCntl,(SP)
+            movea.l SP,A0
+            _PMgrOp
+            tst.b   D2
+            beq.b   .L12
+            moveq   #$21,D0
+            movea.l D0,A0
+            _Delay
+.L11:
+            tst.b   D2
+            beq.b   .L12
+            move.b  D2,($C,SP)
+            move.w  #1,($2,SP)
+            move.w  #powerCntl,(SP)
+            movea.l SP,A0
+            _PMgrOp
+.L12:
+            lea     ($10,SP),SP
+            moveq   #0,D0
+            rts
+.L13:
+            movem.l A2-A0/D4-D1,-(SP)
+            move    SR,-(SP)
+            movea.l VIA,A1
+            move.b  (VIA_IER-VIA_Base,A1),D4
+            andi.b  #$10,D4
+            move.b  #$10,(VIA_IER-VIA_Base,A1)
+            subq.l  #2,SP
+            movea.l PowerMgrVars,A2
+            cmpa.w  #-1,A2
+            beq.b   .L14
+            move.b  (SaveSpeedo,A2),D3
+            move.w  D3,(SP)
+            move.b  #CPUSpeed16MHz,(SaveSpeedo,A2)
+.L14:
+            tst.w   Clock16M
+            move.b  #-1,(VIA_DDR_A-VIA_Base,A1)
+            move.b  (VIA_ORA-VIA_Base,A1),D2
+            swap    D2
+            moveq   #7,D3
+.L15:
+            clr.b   (VIA_DDR_A-VIA_Base,A1)
+            move    ($2,SP),SR
+            move.w  (TimeSCSIDB),D2
+            lsl.w   #2,D2
+.L16:
+            btst.b  #1,(A1)
+            beq.b   .L17
+            move.b  (HeapStart,A1),D0
+            cmpi.b  #-1,D0
+            beq.b   .L18
+.L17:
+            dbf     D2,.L16
+            move.l  #$FFFFCD38,D0
+            bra.w   .L27
+.L18:
+            ori.w   #$300,SR
+            tst.w   Clock16M
+            lea     ($1,A0),A2
+            moveq   #$40,D2
+            
 
