@@ -60,6 +60,7 @@ SaveSpeedo      EQU         $E                      ; Current CPU speed
 Charger         EQU         $F                      ; Charger status flag
 SleepFlags      EQU         $10                     ; Misc status flags
 TOdirtyFlag     EQU         $11                     ; Timeouts are dirtry flag
+WakeVector      EQU         $12                     
 LastAct         EQU         $1A                     ; Last user activity
 LastHd          EQU         $1E                     ; Last hard disk activity
 LowWarn         EQU         $22                     ; Low power warning threshold

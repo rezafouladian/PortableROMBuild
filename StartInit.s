@@ -56,7 +56,7 @@ PortableAbs EQU     0
             endm
 
             org     BaseOfROM
-Checksum    dc.l    $96CA3846
+ROMChecksum dc.l    $96CA3846
 StartPC     dc.l    ResetEntry
 ROMVersion  dc.b    $3
             dc.b    $7A
@@ -861,180 +861,177 @@ GoofyDoEject:
 TMVectors:
             dc.l    $2000                           ; Initial stack pointer
             dc.l    StartTest1                      ; Initial program counter
-            dc.l    BusError                        ; Bus error veector
-            dc.l    AdrError                        ; Address error vector
-            dc.l    IllError                        ; Illegal instruction error vector
-            dc.l    ZerError
-            dc.l    ChkError
-            dc.l    TrapV
-            dc.l    PrivError
-            dc.l    Trace
-            dc.l    LineA
-            dc.l    LineF
-            dc.l    Unassigned
-            dc.l    CPProtocol
-            dc.l    FormatX
-            dc.l    SpurInterrupt
-            dc.l    Unassigned
-            dc.l    Unassigned
-            dc.l    Unassigned
-            dc.l    Unassigned
-            dc.l    Unassigned
-            dc.l    Unassigned
-            dc.l    Unassigned
-            dc.l    Unassigned
-            dc.l    SpurInterrupt
-            dc.l    IntLevel1
-            dc.l    IntLevel2
-            dc.l    IntLevel3
-            dc.l    IntLevel4
-            dc.l    IntLevel5
-            dc.l    IntLevel6
-            dc.l    IntLevel7
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    TrapInst
-            dc.l    FPCP1
-            dc.l    FPCP2
-            dc.l    FPCP3
-            dc.l    FPCP4
-            dc.l    FPCP5
-            dc.l    FPCP6
-            dc.l    FPCP7
-            dc.l    Unassigned
-            dc.l    PMMUConfig
-            dc.l    PMMUIllegal
-            dc.l    PMMUAccess
-            dc.l    Unassigned
-            dc.l    Unassigned
-            dc.l    Unassigned
-            dc.l    Unassigned
-            dc.l    Unassigned
-BusError:
+            dc.l    .BusError                       ; Bus error veector
+            dc.l    .AdrError                       ; Address error vector
+            dc.l    .IllError                       ; Illegal instruction error vector
+            dc.l    .ZerError
+            dc.l    .ChkError
+            dc.l    .TrapV
+            dc.l    .PrivError
+            dc.l    .Trace
+            dc.l    .LineA
+            dc.l    .LineF
+            dc.l    .Unassigned
+            dc.l    .CPProtocol
+            dc.l    .FormatX
+            dc.l    .SpurInterrupt
+            dc.l    .Unassigned
+            dc.l    .Unassigned
+            dc.l    .Unassigned
+            dc.l    .Unassigned
+            dc.l    .Unassigned
+            dc.l    .Unassigned
+            dc.l    .Unassigned
+            dc.l    .Unassigned
+            dc.l    .SpurInterrupt
+            dc.l    .IntLevel1
+            dc.l    .IntLevel2
+            dc.l    .IntLevel3
+            dc.l    .IntLevel4
+            dc.l    .IntLevel5
+            dc.l    .IntLevel6
+            dc.l    .IntLevel7
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .TrapInst
+            dc.l    .FPCP1
+            dc.l    .FPCP2
+            dc.l    .FPCP3
+            dc.l    .FPCP4
+            dc.l    .FPCP5
+            dc.l    .FPCP6
+            dc.l    .FPCP7
+            dc.l    .Unassigned
+            dc.l    .PMMUConfig
+            dc.l    .PMMUIllegal
+            dc.l    .PMMUAccess
+            dc.l    .Unassigned
+            dc.l    .Unassigned
+            dc.l    .Unassigned
+            dc.l    .Unassigned
+            dc.l    .Unassigned
+.BusError:
             btst.l  #beok,D7                        ; Are bus errors expected?
-            beq.b   .L1
+            beq.b   .BusError2
             movea.l A5,SP
             jmp     (A6)
-.L1:
+.BusError2:
             ori.w   #BECode,D7
             bra.w   ExceptionHandler
-AdrError:
+.AdrError:
             ori.w   #ADCode,D7
             bra.w   ExceptionHandler
-IllError:
+.IllError:
             ori.w   #ILCode,D7
             bra.w   ExceptionHandler
-ZerError:
+.ZerError:
             ori.w   #ZDCode,D7
             bra.w   ExceptionHandler
-ChkError:
+.ChkError:
             ori.w   #CICode,D7
             bra.w   ExceptionHandler
-TrapV:
+.TrapV:
             ori.w   #TPCode,D7
             bra.w   ExceptionHandler
-PrivError:
+.PrivError:
             ori.w   #PVCode,D7
             bra.w   ExceptionHandler
-Trace:
+.Trace:
             ori.w   #TECode,D7
             bra.w   ExceptionHandler
-LineA:
+.LineA:
             ori.w   #ATCode,D7
             bra.w   ExceptionHandler
-LineF:
+.LineF:
             ori.w   #FTCode,D7
             bra.w   ExceptionHandler
-Unassigned:
+.Unassigned:
             ori.w   #UNCode,D7
             bra.w   ExceptionHandler
-CPProtocol:
+.CPProtocol:
             ori.w   #CPCode,D7
             bra.w   ExceptionHandler
-FormatX:
+.FormatX:
             ori.w   #FMCode,D7
             bra.w   ExceptionHandler
-SpurInterrupt:
+.SpurInterrupt:
             ori.w   #SICode,D7
             bra.w   ExceptionHandler
-TrapInst:
+.TrapInst:
             ori.w   #TNCode,D7
             bra.b   ExceptionHandler
-IntLevel1:
+.IntLevel1:
             ori.w   #L1Code,D7
             bra.b   ExceptionHandler
-IntLevel2:
+.IntLevel2:
             ori.w   #L2Code,D7
             bra.b   ExceptionHandler
-IntLevel3:
+.IntLevel3:
             ori.w   #L3Code,D7
             bra.b   ExceptionHandler
-IntLevel4:
+.IntLevel4:
             ori.w   #L4Code,D7
             bset.l  #nmi,D7
             bra.b   ExceptionHandler
-IntLevel5:
+.IntLevel5:
             ori.w   #L5Code,D7
             bset.l  #nmi,D7
             bra.b   ExceptionHandler
-IntLevel6:
+.IntLevel6:
             ori.w   #L6Code,D7
             bset.l  #nmi,D7
             bra.b   ExceptionHandler
-IntLevel7:
+.IntLevel7:
             ori.w   #L7Code,D7
             bset.l  #nmi,D7
             bra.b   ExceptionHandler
-FPCP1:
+.FPCP1:
             ori.w   #F1Code,D7
             bra.b   ExceptionHandler
-FPCP2:
+.FPCP2:
             ori.w   #F2Code,D7
             bra.b   ExceptionHandler
-FPCP3:
+.FPCP3:
             ori.w   #F3Code,D7
             bra.b   ExceptionHandler
-FPCP4:
+.FPCP4:
             ori.w   #F4Code,D7
             bra.b   ExceptionHandler
-FPCP5:
+.FPCP5:
             ori.w   #F5Code,D7
             bra.b   ExceptionHandler
-FPCP6:
+.FPCP6:
             ori.w   #F6Code,D7
             bra.b   ExceptionHandler
-FPCP7:
+.FPCP7:
             ori.w   #F7Code,D7
             bra.b   ExceptionHandler
-PMMUConfig:
+.PMMUConfig:
             ori.w   #PCCode,D7
             bra.b   ExceptionHandler
-PMMUIllegal:
+.PMMUIllegal:
             ori.w   #PICode,D7
             bra.b   ExceptionHandler
-PMMUAccess:
+.PMMUAccess:
             ori.w   #PACode,D7
 ExceptionHandler:
             bset.l  #excp,D7                        ; Set exception flag
             move.l  SP,D6                           ; Save stack pointer
             movea.w #$2000,SP                       ; Initialize stack pointer
             jpp     Error1Handler                   ; Handle error
-            IF PortableAbs
-            org     $900BBC
-            ENDIF
 StartTest1:
             movea.w #$2000,SP                       ; Initialize stack pointer
             moveq   #0,D7                           ; Clear flags register
@@ -1750,22 +1747,23 @@ getCmd:
             bra.w   TMRestart_Continue
 .checkCmd:
             btst.l  #star,D7
-            beq.w   .DoTest_Invalid
+            beq.w   DoTest_Invalid
             bclr.l  #star,D7
-            cmpi.b  #'S',D5
-            bne.b   .LoadAddr
+Service:
+            cmpi.b  #'S',D5                         ; Is the command *S?
+            bne.b   LoadAddr                        ; No, try the next command
             bclr.l  #MsgQ,D7
             bclr.l  #timer,D7
             bra.w   EchoCmd
 ; LoadAddr - (*L)
 ; 
 ; Set the load address register (A4)
-.LoadAddr:
-            cmpi.b  #'L',D5
-            bne.b   .ByteCnt
-            moveq   #4,D2
-            BSR6    GetNBytes
-            movea.l D1,A4
+LoadAddr:
+            cmpi.b  #'L',D5                         ; Is the command *L?
+            bne.b   ByteCnt                         ; No, try the next command
+            moveq   #4,D2                           ; We're reading 4 bytes
+            BSR6    GetNBytes                       ; Get the bytes from serial
+            movea.l D1,A4                           ; Load the input into A4
             btst.l  #echo,D7
             beq.w   EchoCmd
             bclr.l  #crlf,D7
@@ -1776,9 +1774,9 @@ getCmd:
 ; ByteCnt - (*B)
 ; 
 ; Set byte count (D4)
-.ByteCnt:
+ByteCnt:
             cmpi.b  #'B',D5
-            bne.b   .GetData
+            bne.b   GetData
             moveq   #2,D2
             BSR6    GetNBytes
             move.w  D1,D4
@@ -1796,9 +1794,9 @@ getCmd:
 ; Inputs:   A4      Start address
 ;           D4.hw   Number of bytes to load
 ; Output:   D6      Checksum
-.GetData:
+GetData:
             cmpi.b  #'D',D5
-            bne.b   .Checksum
+            bne.b   Checksum
             moveq   #0,D6
             subq.w  #1,D4
             bge.b   .GetData2
@@ -1812,9 +1810,9 @@ getCmd:
             add.l   D0,D6
             dbf     D4,.GetData2
             bra.w   EchoCmd
-.Checksum:
+Checksum:
             cmpi.b  #'C',D5
-            bne.b   .Execute
+            bne.b   Execute
             moveq   #0,D6
             subq.w  #1,D4
             bge.b   .Checksum1
@@ -1830,9 +1828,9 @@ getCmd:
             moveq   #4,D2
             lea     EchoCmd,A6
             jpp     PutNBytes
-.Execute:
+Execute:
             cmpi.b  #'G',D5
-            bne.b   .LoadA0
+            bne.b   LoadA0
             moveq   #4,D2
             BSR6    GetNBytes
             movea.l D1,A3
@@ -1846,9 +1844,9 @@ getCmd:
             bclr.l  #crlf,D7
             lea     EchoCmd,A6
             jmp     (A3)
-.LoadA0:
+LoadA0:
             cmpi.b  #'0',D5
-            bne.b   .LoadA1
+            bne.b   LoadA1
             moveq   #4,D2
             BSR6    GetNBytes
             movea.l D1,A0
@@ -1859,9 +1857,9 @@ getCmd:
             moveq   #4,D2
             lea     EchoCmd,A6
             jpp     PutNBytes
-.LoadA1:
+LoadA1:
             cmpi.b  #'1',D5
-            bne.b   .SetCache
+            bne.b   SetCache
             moveq   #4,D2
             BSR6    GetNBytes
             movea.l D1,A1
@@ -1872,63 +1870,69 @@ getCmd:
             moveq   #4,D2
             lea     EchoCmd,A6
             jpp     PutNBytes
-.SetCache:
+; SetCache - *2
+;
+; Set the cache control register (the Portable only has a 68HC000, no there is no CACR)
+SetCache:
             cmpi.b  #'2',D5
-            bne.b   .MMUDis
-            bra.w   EchoCmd
-.MMUDis:
+            bne.b   MMUDis
+            bra.w   EchoCmd                         ; No CACR, nothing to do.
+; MMUDis - *3
+;
+; Disable MMU translation (no MMU on the Portable, so this test does nothing)
+MMUDis:
             cmpi.b  #'3',D5
-            bne.b   .ClearResult
-            bra.w   EchoCmd
-.ClearResult:
+            bne.b   ClearResult
+            bra.w   EchoCmd                         ; No MMU, nothing to do.
+ClearResult:
             cmpi.b  #'4',D5
-            bne.b   .StartBootMsg
+            bne.b   StartBootMsg
             clr.w   D7
             moveq   #0,D6
             bra.w   EchoCmd
-.StartBootMsg:
+StartBootMsg:
             cmpi.b  #'5',D5
-            bne.b   .CPUReset
+            bne.b   CPUReset
             bset.l  #timer,D7
             bset.l  #MsgQ,D7
             move.w  #sec,D4
             swap    D4
             lea     EchoCmd,A6
             jpp     StartTimer
-.CPUReset:
+CPUReset:
             cmpi.b  #'6',D5
-            bne.b   .PreventSleep
+            bne.b   PreventSleep
             bra.w   EchoCmd
-.PreventSleep:
+PreventSleep:
             cmpi.b  #'7',D5
-            bne.b   .cmdU
+            bne.b   cmdU
             bset.l  #nosleep,D7
             bra.w   EchoCmd
-.cmdU:
+cmdU:
             cmpi.b  #'U',D5
-            bne.b   .cmdW
+            bne.b   cmdW
             bra.w   EchoCmd
-.cmdW:
+cmdW:
             cmpi.b  #'W',D5
-            bne.b   .cmdQ
+            bne.b   cmdQ
             bra.w   EchoCmd
-.cmdQ:
+cmdQ:
             cmpi.b  #'Q',D5
-            bne.b   .ASCIIMode
+            bne.b   ASCIIMode
             bra.w   EchoCmd
-.ASCIIMode:
+ASCIIMode:
             cmpi.b  #'A',D5
-            bne.b   .HEXMode
+            bne.b   HEXMode
             bset.l  #aski,D7
             bra.w   EchoCmd
-.HEXMode:
+HEXMode:
             cmpi.b  #'H',D5
-            bne.b   .SendResults                    ; No, go to the next command
+            bne.b   SendResults                    ; No, go to the next command
             bclr.l  #aski,D7
             bra.w   EchoCmd
-.SendResults:
+SendResults:
             cmpi.b  #'R',D5
-            bne.b   .MemDump                        ; No, go to the next command
+            bne.b   MemDump                        ; No, go to the next command
             bclr.l  #crlf,D7
             move.l  D6,D0
             moveq   #4,D2
@@ -1938,35 +1942,37 @@ getCmd:
             moveq   #2,D2
             lea     EchoCmd,A6
             jpp     PutNBytes
-.MemDump:
+MemDump:
             cmpi.b  #'M',D5
-            bne.b   .EchoOn
+            bne.b   EchoOn
             asr.w   #2,D4
             subq.w  #1,D4
-            bge.b   .MemDump2
+            bge.b   .dump
             clr.w   D4
-.MemDump2:
+.dump:
             bset.l  #crlf,D7
-.MemDump3:
+.loop:
             move.l  (A4)+,D0
             lea     .MemDump4,A6
             moveq   #4,D2
-            jpp     PutNBytes
+            ; Idealy this would be a BSR6 but since the LEA instruction occurs before the MOVEQ
+            ; in the original Portable ROM, this is not implemented right now.
+            jpp     PutNBytes                       ; Output the bytes
 .MemDump4:
-            dbf     D4,.MemDump3
+            dbf     D4,.loop                        ; Loop until complete
             bra.w   EchoCmd
-.EchoOn:
+EchoOn:
             cmpi.b  #'E',D5
-            bne.b   .InitTestManager
+            bne.b   InitTestManager
             bset.l  #echo,D7
             bra.w   EchoCmd
-.InitTestManager:
+InitTestManager:
             cmpi.b  #'I',D5
-            bne.b   .PwrMgrCmd
+            bne.b   PwrMgrCmd
             jpp     StartTest1
-.PwrMgrCmd:
+PwrMgrCmd:
             cmpi.b  #'P',D5
-            bne.b   .DoCritTest
+            bne.b   DoCritTest
             movea.l D5,A3
             moveq   #2,D2
             BSR6    GetNBytes
@@ -1992,9 +1998,9 @@ getCmd:
             move.l  D1,D6
             move.l  A3,D5
             bra.w   EchoCmd
-.DoCritTest:
+DoCritTest:
             cmpi.b  #'T',D5
-            bne.w   .DoNonCritTest
+            bne.w   DoNonCritTest
             moveq   #4,D2
             BSR6    GetNBytes
             movea.l D1,A2
@@ -2021,7 +2027,7 @@ getCmd:
             swap    D1
             move.b  #'?',D5
             cmp.w   MaxTest,D1
-            bge.w   .DoTest_Invalid
+            bge.w   DoTest_Invalid
             asl.w   #1,D1
             lea     TJump,A5
             move.w  (A5,D1),D1
@@ -2054,9 +2060,9 @@ getCmd:
 .DoCritTestEcho:
             move.l  #$540054,D5                     ; Fake a "T" to echo
             bra.w   EchoCmd
-.DoNonCritTest:
+DoNonCritTest:
             cmpi.b  #'N',D5
-            bne.w   .DoTest_Invalid
+            bne.w   DoTest_Invalid
             moveq   #4,D2
             BSR6    GetNBytes
             movea.l D1,A2
@@ -2084,7 +2090,7 @@ getCmd:
             move.b  #'?',D5
             subi.w  #$80,D1
             cmp.w   MaxNTst,D1
-            bge.b   .DoTest_Invalid
+            bge.b   DoTest_Invalid
             asl.w   #1,D1
             lea     NJump,A5
             move.w  (A5,D1),D1
@@ -2129,7 +2135,7 @@ getCmd:
 .DoNonCritTest13:
             move.l  #$4E004E,D5
             bra.b   EchoCmd
-.DoTest_Invalid:
+DoTest_Invalid:
             clr.w   D0
             move.b  D5,D0
             lea     EchoCmd_End,A6
@@ -2147,7 +2153,7 @@ EchoCmd:
 EchoCmd_End:
             bclr.l  #crlf,D7
 TMRestart_Continue:
-            btst.l  #MsgQ,D7
+            btst.l  #MsgQ,D7                        ; Any messages queued?
             beq.b   .NoUnQ
             btst.l  #timer,D7
             beq.b   .NoTimer
@@ -2257,6 +2263,12 @@ CvtAscii:
 .L2:
             clr.w   D0
             jmp     (A6)
+; GetNBytes
+; 
+; Get up to 4 bytes as input from the serial port.
+;
+; Inputs:   D2      Number of bytes to receive (max 4)
+; Outputs:  D1      Received bytes
 GetNBytes:
             movea.l A6,A5
             moveq   #0,D1
@@ -2617,9 +2629,9 @@ DataBusTest:
 StartUpROMTest:
             moveq   #0,D0
             moveq   #0,D1
-            lea     BaseOfROM,A0
+            lea     ROMChecksum,A0
             move.l  (A0)+,D4                        ; Load expected checksum
-            move.l  #ROMSize/2-2,D3
+            move.l  #ROMSize/2-2,D3                 ; We're doing 
 .Loop:
             move.w  (A0)+,D0                        ; Fetch a ROM word
             add.l   D0,D1                           ; Add to checksum
@@ -2632,6 +2644,11 @@ StartUpROMTest:
             move.w  #$FFFF,D6                       ; Set failed code in minor error register
 .End:
             jmp     (A6)                            ; Return
+; Mod3Test
+; 
+; Inputs:   A0      Start of memory to test
+;           A1      End of memory to test
+; Outputs:  D6      Failed bit mask
 Mod3Test:
             movem.l .Mod3Pat,D0-D5
             movea.l A0,A2
@@ -2740,6 +2757,11 @@ Mod3Test:
             dc.l    $6DB6DB6D
             dc.l    $B6DB6DB6
             dc.l    $DB6DB6DB
+; RevMod3Test
+; 
+; Inputs:   A0      Start of memory to test
+;           A1      End of memory to test
+; Outputs:  D6      Failed bit mask
 RevMod3Test:
             movem.l .RevMod3Pat,D0-D5
             movea.l A1,A2
@@ -2845,6 +2867,11 @@ RevMod3Test:
             dc.l    $6DB6DB6D
             dc.l    $B6DB6DB6
             dc.l    $DB6DB6DB
+; RomTest
+; 
+; Run a ROM test on individual ROMs
+;
+; Outputs:  D6      Failed bit mask
 RomTest:
             lea     myROMSums.l,A1
             lea     BaseOfROM,A0
@@ -2897,6 +2924,13 @@ RomTest:
             bset.l  #3,D6
 .L6:
             jmp     (A6)                            ; Return
+; ExtRAMTest
+; 
+; Test RAM using a march pattern
+;
+; Inputs:   A0      Start of memory to test
+;           A1      End of memory to test
+; Outputs:  D6      Failed bit mask
 ExtRAMTest:
             moveq   #0,D0
             moveq   #-1,D1
@@ -2948,8 +2982,11 @@ ExtRAMTest:
             move.l  D6,D0
             swap    D0
             or.w    D0,D6
-            andi.l  #$FFFF,D6
+            andi.l  #$FFFF,D6                       ; Only return one word
             jmp     (A6)                            ; Return
+; AddrLineTest
+;
+; 
 AddrLineTest:
             move.l  A0,D0
             lea     $80000,A2
@@ -3079,6 +3116,9 @@ VramDataTest:
             or.b    D0,D6
             movea.l A3,A6
             jmp     (A6)
+; MapRamDataTest
+;
+; Write and verify patterns in the Portable's mapper registers.
 MapRamDataTest:
             lea     MapperBase,A0
             lea     MapTestTable,A1
@@ -4827,5 +4867,6 @@ PMgrOp:
             tst.w   Clock16M
             lea     ($1,A0),A2
             moveq   #$40,D2
-            
 
+
+.L27:

@@ -17,6 +17,13 @@ RomRsrcHead:
 WakeUp:
             move    #$2700,SR
             movea.l PowerMgrVars,A2
+            move.l  (WakeVector,A2),D0
+            beq.b   .Resume                         ; If we don't have a WakeVector then skip
+            movea.l D0,A2
+            jmp     (A2)
+.Resume:
+            move.l  #wmStConst,WarmStart
+
 
         
 
@@ -91,3 +98,15 @@ CrsrDevHandleVBL:
 
             org     $92679C
 InitCrTable:
+
+
+            org     $90534A
+VRemove_Exit:
+            rts
+VBLInt_VIA:
+            addq.l  #1,(Ticks)
+            move.b  #2,(VIA_IFR-VIA_Base,A1)
+            bset.b  #6,VBLQueue
+            bne.b   VRemove_Exit
+            move    #$2000,SR
+
