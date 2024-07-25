@@ -1,9 +1,11 @@
 BaseOfROM       EQU         $900000
 
+Clock1M         EQU         $FE0002
 Clock16M        EQU         $FE0000
 
 RAMconfigBase   EQU         $FE0200
 
+ResetVector     EQU         $4
 WarmStart       EQU         $CFC
 PowerMgrVars    EQU         $D18
 HeapStart       EQU         $1E00
@@ -59,19 +61,19 @@ KeyRepThresh    EQU         $190
 KeyRepTime      EQU         $18A                    ; Tick count when key was last repeated [long]
 DoubleTime      EQU         $2F0
 CaretTime       EQU         $2F4
-SPClikCaret     EQU         $209
+SPClikCaret     EQU         $209                    ; Double-click and caret-blink times [byte]
 SPKbd           EQU         $206
 FlEvtMask       EQU         $25E
 IAZNotify       EQU         $33C
 AlarmState      EQU         $21F
 Lev1AutoVector  EQU         $64
 Lev2AutoVector  EQU         $68
-TimeDBRA        EQU         $D00
+TimeDBRA        EQU         $D00                    ; Number of times the DBRA instruction can be executed per millisecond [word]
 IllegalInstructionVector    EQU $10
 JFetch          EQU         $8F4
 VBLQueue        EQU         $160
-TimeSCCDB       EQU         $D02
-TimeSCSIDB      EQU         $B24
+TimeSCCDB       EQU         $D02                    ; Number of times the SCC can be accessed per millisecond [word]
+TimeSCSIDB      EQU         $B24                    ; Number of times SCSI can be accessed per millisecond [word]
 DtskQHdr_Flags  EQU         $D92
 ADBDelay        EQU         $CEA
 SCSIBase        EQU         $C00

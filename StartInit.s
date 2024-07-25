@@ -4867,6 +4867,159 @@ PMgrOp:
             tst.w   Clock16M
             lea     ($1,A0),A2
             moveq   #$40,D2
-
-
+            bsr.w   FUN_0090455C
+            beq.b   .L20
+            moveq   #$40,D2
+.L19:
+            move    ($2,SP),SR
+            dbf     D2,.L19
+            dbf     D3,.L15
+            bra.b   .L27
+.L20:
+            moveq   #0,D1
+            lea     ($3,A0),A2
+            move.b  (A2),D1
+            bsr.w   FUN_00904558
+            bne.b   .L27
+            subq.w  #1,D1
+            bmi.b   .L22
+            movea.l ($4,A0),A2
+.L21:
+            bsr.w   FUN_00904558
+            bne.b   .L27
+            dbf     D1,.L21
+.L22:
+            move.b  ($1,A0),D0
+            btst.l  #3,D0
+            beq.b   .L26
+            movea.l A0,A2
+            addq.l  #1,A2
+            move.w  TimeSCSIDB,D2
+.L23:
+            btst.b  #1,(A1)
+            beq.b   .L24
+            dbf     D2,.L23
+            move.l  #$FFFFCD37,D0
+            bra.b   .L27
+.L24:
+            clr.l   (A0)
+            bsr.w   FUN_009045A0
+            bne.b   .L27
+            addq.l  #1,A2
+            bsr.w   FUN_009045A0
+            bne.b   .L27
+            move.w  ($2,A0),D1
+            movea.l ($8,A0),A2
+            subq.w  #1,D1
+            bmi.b   .L26
+.L25:
+            bsr.w   FUN_009045A0
+            bne.b   .L27
+            dbf     D1,.L25
+.L26:
+            moveq   #0,D0
 .L27:
+            move.b  #-1,(VIA_DDR_A-VIA_Base,A1)
+            swap    D2
+            move.b  D2,(VIA_ORA-VIA_Base,A1)
+            clr.b   (VIA_DDR_A-VIA_Base,A1)
+            movea.l PowerMgrVars,A2
+            cmpa.w  #-1,A2
+            beq.b   .L28
+            move.w  (SP),D3
+            move.b  D3,(SaveSpeedo,A2)
+            cmpi.b  #$10,D3
+            beq.b   .L28
+            tst.w   Clock1M
+.L28:
+            addq.l  #2,SP
+            bset.l  #7,D4
+            move.b  D4,(VIA_IER-VIA_Base,A1)
+            move    (SP)+,SR
+            movem.l (SP)+,D1-D4/A0-A2
+            tst.w   D0
+            rts
+FUN_00904558:
+            move.w  #$400,D2
+FUN_0090455C:
+            moveq   #0,D0
+            move.b  #-1,(VIA_DDR_A-VIA_Base,A1)
+            move.b  (A2)+,(VIA_ORA-VIA_Base,A1)
+            bclr.b  #PMreq,(VIA_BufB-VIA_Base,A1)
+.L1:
+            btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
+            beq.b   .L2
+            dbf     D1,.L1
+            move.l  #$FFFFCD36,D0
+            bra.b   SharedReturn_90455C
+.L2:
+            moveq   #$40,D2
+            bset.b  #PMreq,(VIA_BufB-VIA_Base,A1)
+.L3:
+            btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
+            bne.b   SharedReturn_90455C
+            dbf     D2,.L3
+            move.l  #$FFFFCD35,D0
+SharedReturn_90455C:
+            bset.b  #PMreq,(VIA_BufB-VIA_Base,A1)
+            clr.b   (VIA_DDR_A-VIA_Base,A1)
+            tst.l   D0
+            rts
+FUN_009045A0:
+            moveq   #0,D0
+            clr.b   (VIA_DDR_A-VIA_Base,A1)
+            moveq   #64,D2
+.L1:
+            btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
+            beq.b   .L2
+            dbf     D2,.L1
+            move.l  #$FFFFCD34,D0
+            bra.b   SharedReturn_90455C
+.L2:
+            bclr.b  #PMreq,(VIA_BufB-VIA_Base,A1)
+            moveq   #64,D2
+            move.b  (VIA_ORA-VIA_Base,A1),(A2)+
+.L3:
+            btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
+            bne.b   SharedReturn_90455C
+            dbf     D2,.L3
+            move.l  #$FFFFCD33,D0
+            bra.b   SharedReturn_90455C
+GoToSleep:
+            btst.l  #9,D1
+            bne.w   SlpQInstall
+            btst.l  #10,D1
+            bne.w   SlpQRemove
+            move    SR,-(SP)
+            movem.l A6-A0/D7-D1,-(SP)
+            move.w  D0,D1
+            move.w  D0,D2
+            cmpi.b  #1,D0
+            beq.b   .L1
+            cmpi.b  #2,D0
+            beq.b   .L1
+            cmpi.b  #6,D0
+            bne.b   .L3
+.L1:
+            movea.l PowerMgrVars,A0
+            move.l  (SleepNetHook,A0),D3
+            beq.b   .L2
+            movea.l D3,A1
+            jsr     (A1)
+.L2:
+            bsr.w   CheckAppleTalk
+            bne.b   .L3
+            move.w  D2,D0
+            bsr.w   DoQueue
+            beq.b   .L4
+.L3:
+            move.w  D2,D0
+            movem.l (SP)+,D1-D7/A0-A6
+            move    (SP)+,SR
+            rts
+.L4:
+            ori     #$700,SR
+            move.l  ResetVector.w,-(SP)
+            movea.l VIA,A0
+            move.b  #-1,(VIA_DDR_A-VIA_Base,A0)
+            

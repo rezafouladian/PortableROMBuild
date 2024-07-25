@@ -72,6 +72,7 @@ IdleFlagCnt     EQU         $51                     ; Idle flag set/clear counte
 BatAvg          EQU         $52                     ; Average of BatQ
 NTSCcopy        EQU         $53                     ; Copy of NTSC byte, only used from restart to DrawBeepScreen
 BatQIndex       EQU         $5F                     ; Index into circular battery averaging queue
+SleepNetHook    EQU         $60                     ; Hook for calling pre-close ATalk
 vBatInt         EQU         $64                     ; Vector to battery interrupt handler
 vEnvInt         EQU         $68                     ; Vector to environment interrupt handler
 Level4Cnt       EQU         $6D
