@@ -85,19 +85,20 @@ ForeignOS   dc.l    InitDispatcher-BaseOfROM
             dc.l    0
             
 StartBoot:
-            move    #$2700,SR                       ; Disable processor interrupts
+            move    #1<<SupervisorBit|1<<IPL2|1<<IPL1|1<<IPL0,SR    ; Disable processor interrupts
             lea     BaseOfROM,A0
             move.l  A0,D0
             bne.b   .L1
             move.l  #BaseOfROM,D0
             jmp     (.L1,PC,D0.l)
 .L1:
-            tst.w   Clock16M
+            tst.w   Clock16M                        ; 
             move.w  #RAMconfigInit,RAMconfigBase
-            cmpi.l  #sleepConst,WarmStart
+            cmpi.l  #sleepConst,WarmStart           ; Check if we're resuming from sleep
             bne.b   .L2
-            move.l  #wmStConst,WarmStart
-            jpp     WakeUp
+            move.l  #wmStConst,WarmStart            ; 
+            jpp     WakeUp                          ; Perform wake from sleep tasks
+; Not returning from sleep, start up normally
 .L2:
             jpp     StartTest1
 StartInit1:
@@ -107,22 +108,22 @@ StartInit1:
             bsr.w   InitSCSI
             bsr.w   WhichCPU                        ; Get CPU type in low word of D7
             bsr.w   WhichBoard                      ; Get logic board type in high word of D7
-            cmpi.l  #wmStConst,WarmStart
-            beq.b   .L1
+            cmpi.l  #wmStConst,WarmStart            ; Is this a cold start
+            beq.b   .L1                             ; Skip the RAM test if it's a warm start
             movea.l A5,A1
             movea.l SP,A0
             jsp     RamTest
             movea.l SP,A1
-            suba.l  A0,A0
+            suba.l  A0,A0                           ; Test from the beginning of RAM
             movea.l A5,SP
             jsp     RamTest
             movea.l A1,SP
 .L1:
-            move.l  WarmStart,-(SP)
+            move.l  WarmStart,-(SP)                 ; Save WarmStart value
             lea     SysCom,A0                       ; A0 = pointer to start of system globals
             lea     HeapStart,A1                    ; A1 = pointer to end of system globals
             bsr.w   FillWithOnes                    ; Fill system globals with ones
-            move.l  (SP)+,WarmStart
+            move.l  (SP)+,WarmStart                 ; Restore WarmStart value
             move.b  D7,CPUFlag                      ; Save type of CPU we have
             swap    D7
             move.b  D7,WhichBox
@@ -138,6 +139,7 @@ StartInit1:
             jmp     (A0)
 .L3:
             bsr.w   InitHiMemGlobals                ; Set up high memory
+; BootRetry
 BootRetry:
             move    #$2700,SR                       ; Disable interrupts
             movea.l VIA,A1
@@ -162,7 +164,7 @@ BootRetry:
             movea.l A0,SP                           ; Set the stack pointer there
             suba.w  #BootStackSize,A0               ; Give ourselves some stack space
             _SetApplLimit                           ; Don't let the system heap crash our stack
-            lea     ($308).w,A1
+            lea     DrvQHdr.w,A1
             jsp     InitQueue
             BigJsr  InitSCSIMgr,A0
             bsr.w   InitIOMgr
@@ -329,7 +331,7 @@ InitPMgrVars:
             moveq   #1,D0
             move.l  D0,(LastAct,A2)
             move.l  D0,(LastHd,A2)
-            move.b  #16,(SaveSpeedo,A2)
+            move.b  #CPUSpeed16MHz,(SaveSpeedo,A2)
             lea     BatInt,A1
             move.l  A1,(vBatInt,A2)
             lea     EnvInt,A1
@@ -1062,6 +1064,7 @@ VIASetup:
             btst.b  #TestJumper,(VIA_BufB-VIA_Base,A2)  ; Is the test "jumper" installed?
             bne.b   PowerManagerInit
             bset.l  #test,D7                            ; Jumper found, flag bit for later
+
 PowerManagerInit:
             move.w  #ErrPmgrTurnOn,D7
             lea     .L1,A6

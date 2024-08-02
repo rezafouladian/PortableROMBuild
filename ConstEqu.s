@@ -1,3 +1,10 @@
+; Status Register Constants
+TraceBit        EQU         15
+SupervisorBit   EQU         13
+IPL2            EQU         10
+IPL1            EQU         9
+IPL0            EQU         8
+
 ROMSize         EQU         $40000
 
 RAMconfigInit   EQU         $6
