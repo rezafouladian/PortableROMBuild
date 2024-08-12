@@ -123,7 +123,7 @@ cpu68020        EQU         2
 cpu68030        EQU         3
 
 PMreq           EQU         0                       ; Power manager handshake request
-PMack           EQU         1
+PMack           EQU         1                       ; Power manager handshack acknowledge
 TestJumper      EQU         2                       ; Test jumper
 SyncM           EQU         3                       ; Synchronous modem support
                                                     ; 0 = original Macintosh configuration
