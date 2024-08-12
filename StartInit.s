@@ -1,7 +1,6 @@
             INCLUDE 'HardwareEqu.s'
             INCLUDE 'ConstEqu.s'
             INCLUDE 'Orphan.s'
-            INCLUDE 'Traps.s'
             INCLUDE 'ROMTools/TrapMacros.s'
 
             IFND PortableAbs
