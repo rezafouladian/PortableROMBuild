@@ -1,7 +1,3 @@
-    macro _Open
-        dc.w    $A000
-    endm
-
     macro _Read
         dc.w    $A002
     endm
