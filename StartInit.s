@@ -2,6 +2,7 @@
             INCLUDE 'ConstEqu.s'
             INCLUDE 'Orphan.s'
             INCLUDE 'ROMTools/TrapMacros.s'
+            INCLUDE 'ROMTools/Hardware/Portable.s'
 
             IFND PortableAbs
 PortableAbs EQU     0
