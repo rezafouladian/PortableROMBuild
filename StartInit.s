@@ -5026,4 +5026,88 @@ GoToSleep:
             move.l  ResetVector.w,-(SP)
             movea.l VIA,A0
             move.b  #-1,(VIA_DDR_A-VIA_Base,A0)
-            
+            move.b  (A0),D0
+            move.b  (VIA_DDR_B-VIA_Base,A0),D1
+            move.b  (VIA_ORA-VIA_Base,A0),D2
+            move.b  (VIA_IER-VIA_Base,A0),D3
+            move.b  (VIA_ACR-VIA_Base,A0),D4
+            move.b  (VIA_PCR-VIA_Base,A0),D5
+            movem.w D5-D0,-(SP)
+            clr.b   (VIA_DDR_A-VIA_Base,A0)
+
+
+
+
+
+            org     $91FDB6
+CallText:
+            movea.l (SP)+,A0                        ; Pop return addr
+            move.l  #$10001,-(SP)                   ; Push numer = (1,1)
+            move.l  (SP),-(SP)                      ; Push denom = (1,1)
+            move.l  A0,-(SP)                        ; Restore return address
+            movea.l (A5),A0                         ; Point to QuickDraw globals
+            movea.l (A0),A0                         ; Get current grafport
+            move.l  (GRAFPROCS,A0),D0               ; Is grafprocs nil?
+            movea.l (JStdTEXT),A0                   ; Get piece of trap table
+            beq.b   .USESTD                          ; Yes, use std proc
+            movea.l D0,A0
+            movea.l (A0),A0                         ; No, get proc ptr
+.USESTD:
+            jmp     (A0)                            ; Go to it
+TextFace:
+            movea.l (A5),A0
+            movea.l (A0),A0
+            move.b  (5,SP),($46,A0)
+            bra.b   CharWidth_SHARE
+DrawChar:
+            move.w  #1,-(SP)
+            pea     (7,SP)
+            jsr     CallText
+            bra.b   CharWidth_SHARE
+CharWidth:
+            clr.w   -(SP)
+            move.l  SP,-(SP)
+            move.l  #$10007,-(SP)
+            jsr     TextWidth
+            move.w  (SP)+,(6,SP)
+CharWidth_SHARE:
+            movea.l (SP)+,A0
+            addq.w  #2,SP
+            jmp     (A0)
+TextFont:
+            moveq   #$44,D0
+            bra.b   TextSize_SHARE
+TextMode:
+            moveq   #$48,D0
+            bra.b   TextSize_SHARE
+TextSize:
+            moveq   #$4A,D0
+TextSize_SHARE:
+            jmp     ColorBit\.PortWord
+SpaceExtra:
+            movea.l (A5),A0
+            movea.l (A0),A0
+            move.l  (4,SP),($4C,A0)
+            bra.b   DrawText\.SHARE
+DrawString:
+            movea.l (4,SP),A0
+            clr.w   D0
+            move.b  (A0)+,D0
+            move.w  D0,-(SP)
+            move.l  A0,-(SP)
+            jsr     CallText
+            bra.b   DrawText\.SHARE
+DrawText:
+            movea.l (8,SP),A0                       ; Point to textbuf
+            adda.w  (6,SP),A0                       ; Add starting offset
+            move.w  (4,SP),-(SP)
+            move.l  A0,-(SP)
+            jsr     CallText                        ; Call text routine
+            move.l  (SP)+,(SP)
+.SHARE:
+            move.l  (SP)+,(SP)                      ; Strip params
+            rts                                     ; Return
+StringWidth:
+            movea.l (SP)+,A1
+
+
