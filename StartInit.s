@@ -3912,13 +3912,13 @@ EmbarkOnSearch:
             clr.w   D6
             rts
 WaitForInternal:
-            movem.l A2/D5,-(SP)
-            _GetWaitFlags
+            movem.l A2/D5,-(SP)                     ; Save registers
+            _GetWaitFlags                           ; Get the current flags
             andi.b  #$80,D0
             bne.b   .RawExit
-            _GetTimeOut
+            _GetTimeOut                             ; Get the timeout parameter
             bne.b   .UseGivenTime
-            move.w  #$140,D0
+            move.w  #$14,D0                         ; No parameter returned, so use the default timeout
 .UseGivenTime:
             mulu.w  #$3C,D0
             move.l  D0,D5
