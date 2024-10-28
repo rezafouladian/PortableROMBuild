@@ -3,6 +3,7 @@
             INCLUDE 'Orphan.s'
             INCLUDE 'ROMTools/TrapMacros.s'
             INCLUDE 'ROMTools/Hardware/Portable.s'
+            INCLUDE 'ROMTools/CommonConst.s'
 
             IFND PortableAbs
 PortableAbs EQU     0
