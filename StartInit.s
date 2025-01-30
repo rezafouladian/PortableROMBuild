@@ -4,6 +4,7 @@
             INCLUDE 'ROMTools/TrapMacros.s'
             INCLUDE 'ROMTools/Hardware/Portable.s'
             INCLUDE 'ROMTools/CommonConst.s'
+            INCLUDE 'ROMTools/Globals.s'
 
             IFND PortableAbs
 PortableAbs EQU     0
@@ -87,7 +88,7 @@ ForeignOS   dc.l    InitDispatcher-BaseOfROM
             dc.l    0
             
 StartBoot:
-            move    #1<<SupervisorBit|1<<IPL2|1<<IPL1|1<<IPL0,SR    ; Disable processor interrupts
+            move    #1<<Supervisor|1<<IPL2|1<<IPL1|1<<IPL0,SR    ; Disable processor interrupts
             lea     BaseOfROM,A0
             move.l  A0,D0
             bne.b   .L1
@@ -5035,6 +5036,58 @@ GoToSleep:
             move.b  (VIA_PCR-VIA_Base,A0),D5
             movem.w D5-D0,-(SP)
             clr.b   (VIA_DDR_A-VIA_Base,A0)
+            movea.l ASCBase,A0
+            lea     (ascMode,A0),A0
+            moveq   #6,D0
+.L5:
+            move.b  (A0)+,-(SP)
+            dbf     D0,.L5
+            move.l  SP,($7FFC+Video_Base)
+            movea.l PowerMgrVars,A2
+            movea.l (WakeVector,A2),A3
+            move.l  A3,D0
+            bne.b   .L6
+            lea     WakeUp\.Resume,A3
+.L6:
+            subq.w  #4,SP
+.L7:
+            movea.l SP,A0
+            moveq   #modemRead,D0
+            bsr.w   PMGRrecv
+            move.b  (A0),D0
+            btst.l  #2,D0
+            beq.b   .L8
+            btst.l  #4,D0
+            bne.b   .L7
+.L8:
+            movea.l SP,A0
+            move.l  #sleepSig,(A0)
+            moveq   #4,D1
+            moveq   #sleepReq,D0
+            bsr.w   PMGRsend
+            addq.w  #4,SP
+            tst.l   WarmStart
+            beq.b   .L9
+            move.l  #sleepConst,WarmStart
+            move.l  A3,ResetVector
+            move.l  A3,(WakeVector,A2)
+.L9:
+            bra.b   .L9
+WakeUp:
+            move    #$2700,SR                       ; Disable interrupts
+            movea.l PowerMgrVars,A2
+            move.l  (WakeVector,A2),D0
+            beq.b   .Resume                         ; If we don't have a WakeVector then skip
+            movea.l D0,A2
+            jmp     (A2)
+.Resume:
+            move.l  #wmStConst,WarmStart
+            movea.l ($7FFC+Video_Base),SP
+            move.w  #6,RAMconfigBase
+            movea.l PowerMgrVars,A2
+            bsr.w   RemoveMsg
+            clr.b   (Level4Cnt,A2)
+            move.b  #-1,(LastLevel,A2)
 
 
 

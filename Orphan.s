@@ -13,22 +13,6 @@ DispTable:
             org     $927250
 RomRsrcHead:
 
-            org     $9046C0
-WakeUp:
-            move    #$2700,SR
-            movea.l PowerMgrVars,A2
-            move.l  (WakeVector,A2),D0
-            beq.b   .Resume                         ; If we don't have a WakeVector then skip
-            movea.l D0,A2
-            jmp     (A2)
-.Resume:
-            move.l  #wmStConst,WarmStart
-
-
-        
-
-
-
             org     $9051CE
 InitIntHandler:
 
