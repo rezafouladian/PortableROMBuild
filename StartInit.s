@@ -1,3 +1,4 @@
+            INCLUDE 'ROMTools/Include.s'
             INCLUDE 'HardwareEqu.s'
             INCLUDE 'ConstEqu.s'
             INCLUDE 'Orphan.s'
@@ -5088,6 +5089,124 @@ WakeUp:
             bsr.w   RemoveMsg
             clr.b   (Level4Cnt,A2)
             move.b  #-1,(LastLevel,A2)
+            clr.l   (BatQ,A2)
+            clr.l   (BatQ+4,A2)
+            move.b  #8,(BatQIndex,A2)
+            movea.l ASCBase,A0
+            lea     ($808,A0),A0
+            moveq   #6,D0
+.L2:
+            move.b  (SP)+,-(A0)
+            dbf     D0,.L2
+            tst.b   (ascFifoInt-Sound_Base,A0)
+            movea.l VIA,A0
+            movem.w (SP)+,D0-D5
+            move.b  D0,(VIA_Base-VIA_BufB,A0)
+            move.b  D1,(VIA_Base-VIA_DDR_B,A0)
+            move.b  D2,(VIA_Base-VIA_ORA,A0)
+            move.b  D3,(VIA_Base-VIA_IER,A0)
+            move.b  D4,(VIA_Base-VIA_ACR,A0)
+            move.b  D5,(VIA_Base-VIA_PCR,A0)
+            move.b  (VIA_Base-VIA_T2_H,A0),(VIA_Base-VIA_T2_H,A0)
+            move.b  (VIA_Base-VIA_T1C_H,A0),(VIA_Base-VIA_T1C_H,A0)
+            move.l  (SP)+,ResetVector
+            jsr     InitSCSI                        ; Init the SCSI chip
+            lea     TimeLM,A0
+            moveq   #timeRead,D0
+            bsr.w   PMGRrecv
+            moveq   #3,D0
+            bsr.b   DoQueue
+            _CountADBs
+            cmpi.b  #2,D0
+            bhi.b   .L3
+            bsr.w   KbdReset
+            bra.b   .L4
+.L3:
+            _ADBReInit
+.L4:
+            moveq   #0,D0
+            movem.l (SP)+,D1-D7/A0-A6
+            move    (SP)+,SR
+            rts
+DoQueue:
+            cmpi.w  #SleepNow,D0
+            beq.b   .mustsleep
+            cmpi.w  #SleepDemand,D0
+            beq.b   .mustsleep
+            cmpi.w  #SleepWakeUp,D0
+            beq.b   .mustsleep
+.startreq:
+            move.l  D0,D7
+            movea.l PowerMgrVars,A1
+            movea.l (SlpQHead,A1),A0
+            move.l  A0,D2
+            beq.w   .noentries
+.getreq:
+            movea.l (SleepqProc,A0),A2
+            move.l  A2,D2
+            beq.b   .nextreq
+            move.w  D7,D0
+            movem.l A1-A0,-(SP)
+            jsr     (A2)
+            movem.l (SP)+,A0-A1
+            tst.l   D0
+            beq.b   .nextreq
+            cmpi.w  #SleepUnlock,D7
+            beq.b   .nextreq
+            moveq   #SleepUnlock,D0
+            move.l  D0,D7
+            bra.b   .startreq
+.nextreq:
+            cmpa.l  (SlpQTail,A1),A0
+            beq.b   .checkreq
+            movea.l (A0),A0
+            bra.b   .getreq
+.checkreq:
+            moveq   #SleepDemand,D0
+            cmpi.w  #SleepUnlock,D7
+            bne.b   .mustsleep
+            moveq   #SleepDeny,D0
+            rts
+.mustsleep:
+            move.w  D0,D7
+            movea.l PowerMgrVars,A1
+            movea.l (SlpQHead,A1),A0
+            move.l  A0,D2
+            beq.b   .noentries
+.getdemand:
+            movea.l (SleepqProc,A0),A2
+            move.l  A2,D2
+            beq.b   .nextdemand
+            move.w  D7,D0
+            movem.l A1-A0,-(SP)
+            jsr     (A2)
+            movem.l (SP)+,A0-A1
+.nextdemand:
+            cmpa.l  (SlpQTail,A1),A0
+            beq.b   .noentries
+            movea.l (A0),A0
+            bra.b   .getdemand
+.noentries:
+            moveq   #0,D0
+            rts
+CheckAppleTalk:
+            movem.l A3-A0/D2-D1,-(SP)
+            suba.w  #ioQElSize,SP
+            movea.l SP,A3
+            movea.l PowerMgrVars,A2
+            moveq   #15,D1
+            and.b   PortBUse,D1
+            cmpi.b  #1,D1
+            bne.w   .okexit
+            move.w  D0,D1
+            cmpi.b  #1,D0
+            bne.b   .dmndcase
+            btst.b  #noATChg,ChooserBits
+            beq.b   .done
+            btst.b  #HasCharger,(Charger,A2)
+            bne.w   .done
+            btst.b  #5,PortBUse
+            
 
 
 

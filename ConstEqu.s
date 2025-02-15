@@ -3,13 +3,9 @@ IPL2            EQU         10
 IPL1            EQU         9
 IPL0            EQU         8
 
-ROMSize         EQU         $40000
-
 RAMconfigInit   EQU         $6
 
 IWMInitMode     EQU         $17
-
-sleepSig        EQU         'MATT'
 
 powerCntl       EQU         $10
 pMgrADBoff      EQU         $21                     ; Turn ADB auto-poll off
@@ -54,6 +50,7 @@ HDTime          EQU         $1                      ; Hard disk timeout
 SleepQHdr       EQU         $2                      ; Sleep queue header
 SlpQFlags       EQU         $2                      ; Sleep queue flags
 SlpQHead        EQU         $4                      ; First sleep queue entry
+SlpQTail        EQU         $8
 SysTaskFlag     EQU         $C                      ; System task has been called flag
 LastLevel       EQU         $D                      ; Previous normalized power level
 SaveSpeedo      EQU         $E                      ; Current CPU speed
@@ -97,15 +94,6 @@ SndWFreq        EQU         60*10                   ; Sound Watch (SndWatch) VBL
 BatFreq         EQU         60*1                    ; Battery level monitor VBL is called every second
 
 FBDBSize        EQU         370
-
-hcVideoSize     EQU         $8000
-VideoWidth      EQU         640
-VideoHeight     EQU         400
-NTSCMaxX        EQU         512
-NTSCOffset      EQU         8
-LCDmode         EQU         0
-Mac2Mode        EQU         1
-NTSCmode        EQU         2
 
 boxSE           EQU         $FF
 boxPortable     EQU         4
@@ -212,9 +200,6 @@ Err1            EQU         Err2+2
 Error           EQU         Err1+2
 GSize           EQU         Error+2
 TotalSize       EQU         GSize+8
-
-MaxRAMSize      EQU         $900000
-SlimSpaceSize   EQU         $400000
 
 SlimInstalled   EQU         3
 
