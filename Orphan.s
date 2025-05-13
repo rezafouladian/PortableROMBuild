@@ -1,8 +1,4 @@
-            org     $904DB6
-EMT1010_TrapDispatch:
 
-            org     $904FBA
-Unimplemented:
 
             org     $904F40
 InitDispatcher:
@@ -56,22 +52,7 @@ NMGNEFilter:
             org     $90651E
 FSIODNETbl:
 
-            org     $904AA8
-ErrorBeep1:
-            lea     $904BDC,A4
-            bra     DoBeep
-ErrorBeep2:
-            lea     $904BFC,A4
-            bra     DoBeep
-ErrorBeep3:
-            lea     $904C10,A4
-            bra     DoBeep
-ErrorBeep4:
-            lea     $904C28,A4
-DoBeep:
-
-            org     $904A98
-BootBeep:
+    
 
             org     $907316
 SCSILoad:

@@ -207,6 +207,7 @@ CmdShiftOptDel  EQU         $8805
 
 qHead           EQU         2
 qLink           EQU         0
+qTail           EQU         6
 
 dqRefNum        EQU         $8
 

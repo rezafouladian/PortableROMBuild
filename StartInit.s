@@ -4286,11 +4286,163 @@ BootMe:
             move.w  ($7A,A6),D0
             _InitFS
             lea     (MyIOPBA6,A6),A0
+            move.w  BootDrive,($16,A0)
+            _MountVol
+            bne.w   .L26
+            clr.l   ($12,A0)
+            clr.w   ($1C,A0)
+            _HGetVInfo
+            bne.b   .L3
+            movea.l ($5E,A0),A4
+            move.l  ($5A,A0),D4
+            bsr.w   FUN_00903472
+.L3:
+            lea     SysResName,A1
+            lea     ($A,A6),A0
+            moveq   #$10,D0
+            _BlockMove
+            subq.w  #2,SP
+            clr.l   ResErrProc
+            _InitResources
+            tst.w   (SP)+
+            bpl.b   .L4
+            lea     (-$400,A6),A0
+            clr.l   ($12,A0)
+            _UnmountVol
+            jmp     .L26
+.L4:
+            moveq   #0,D0
+            bsr.w   LoadDSAT
+            move.l  D0,D5
+            bne.b   .L5
+            moveq   #0,D7
+            bra.b   .L6
+.L5:
+            movea.l D5,A0
+            move.l  (A0),DSAlertTab
+.L6:
+            _InitFonts
+            clr.w   -(SP)
+            pea     ($4A,A6)
+            _OpenResFile
+            move.w  (SP)+,D3
+            cmpi.w  #-1,D3
+            beq.b   .L8
+            clr.l   -(SP)
+            clr.w   -(SP)
+            _GetPicture
+            move.l  (SP)+,D0
+            beq.b   .L7_2
+            movea.l D0,A2
+            movea.l D0,A0
+            _HLock
+            movea.l (A0),A0
+            move.l  (6,A0),-(SP)
+            move.l  (2,A0),-(SP)
+            lea     (-$1FE,A6),A0
+            tst.w   (4,A0)
+            bpl.b   .L7
+            movea.l (A0),A0
+            movea.l (A0),A0
+.L7:
+            pea     (6,A0)
+            pea     (4,SP)
+            bsr.w   CenterRect
+            bsr.w   EraseMyIcon
+            move.l  A2,-(SP)
+            pea     (4,SP)
+            _DrawPicture
+            addq.l  #8,SP
+            move.w  D3,-(SP)
+            _CloseResFile
+            sf      D7
+            bra.b   .L10
+.L7_2:
+            move.w  D3,-(SP)
+            _CloseResFile
+.L8:
+            lea     ($4A,A6),A1
+            moveq   #1,D3
+            bsr.w   FUN_00903402
+            sne     D7
+            bne.b   .L10
+            move.l  #$1560200,-(SP)
+            clr.l   -(SP)
+            move.w  #$40,-(SP)
+            pea     ($800,A6)
+            lea     (-$1FE,A6),A2
+            tst.w   (4,A2)
+            bpl.b   .L9
+            movea.l (A2),A2
+            movea.l (A2),A2
+.L9:
+            move.l  #$1560200,-(SP)
+            clr.l   -(SP)
+            pea     (6,A2)
+            pea     (4,SP)
+            bsr.w   CenterRect
+            pea     (8,SP)
+            move.l  A2,-(SP)
+            pea     ($16,SP)
+            pea     ($C,SP)
+            clr.w   -(SP)
+            clr.l   -(SP)
+            _CopyBits
+            adda.w  #$16,SP
+.L10:
+            tst.b   D7
+            beq.b   .L11
+            bsr.w   EraseMyIcon
+.L11:
+            moveq   #$28,D0
+            bsr.w   FUN_009033D4
+            subi.l  #$400,BufPtr
+            lea     ($2A,A6),A1
+            bsr.w   FUN_00903400
+            beq.b   .L12
+            addi.l  #$400,BufPtr
+            bra.b   .L13
+.L12:
+            jsr     (A1)
+            moveq   #-$A,D0
+            bsr.w   FUN_009033D4
+            lea     ($3A,A6),A1
+            bsr.w   FUN_00903400
+            bne.b   .L13
+            jsr     (A1)
+            moveq   #-$B,D0
+            bsr.w   FUN_009033D4
+.L13:
+            lea     SysResName,A1
+            moveq   #-1,D3
+            bsr.w   FUN_00903402
+            bne.b   .L14
+            jsr     (A1)
+.L14:
+            bsr.w   InitADBDrvr
+            bsr.w   MouseInit
+            moveq   #2,D0
+            bsr.w   LoadDSAT
+            beq.b   .L14_2
+            movea.l D0,A0
+            move.l  (A0),DSAlertTab
+            move.l  A0,-(SP)
+            _DetatchResource
+.L14_2:
+            move.l  D5,-(SP)
+            _ReleaseResource
+
+
+
+
 
             org     $903494
 CenterRect:
             org     $9034C6
 MouseInit:
+            moveq   #0,D0
+            move.b  SPVolCtl,D0
+
             org     $903510
 InitEvents:
             org     $90353A
@@ -4436,10 +4588,59 @@ SizeMemory:
             jpp     .Exit
 .Exit:
             jmp     (A6)                            ; Restore return address
-
-            org     $904014
+FUN_00903FC2:
+            moveq   #-1,D3
+            moveq   #0,D2
+            move.b  D0,D2
+            lsl.l   #8,D2
+            move.b  D0,D2
+            lsl.l   #8,D2
+            move.b  D0,D2
+            lsl.l   #8,D2
+            move.b  D0,D2
+            lsl.l   #8,D0
+            lsl.l   #8,D0
+            movea.l D0,A1
+            moveq   #7,D0
+            clr.l   (A4)
+.L1:
+            move.l  D2,(A1)
+            tst.l   (A4)
+            bne.b   .Exit
+            move.l  D3,ResetVector
+            move.l  D3,ResetVector
+            move.l  (A1),D1
+            cmp.b   D1,D2
+            beq.b   .L2
+            ror.l   #8,D1
+            ror.l   #8,D2
+            cmp.b   D1,D2
+            beq.b   .L2
+            ror.l   #8,D1
+            ror.l   #8,D2
+            cmp.b   D1,D2
+            beq.b   .L2
+            ror.l   #8,D1
+            ror.l   #8,D2
+            cmp.b   D1,D2
+            bne.b   .Exit
+.L2:
+            rol.l   #1,D2
+            dbf     D0,.L1
+            move.l  A1,D6
+.Exit:
+            jmp     (A5)
+; PMGRrecv
+;
+; Inputs:   A0 - Data buffer
+;           D0 - Command
 PMGRrecv:
             moveq   #0,D1
+; PMGRsend
+;
+; Inputs:   A0 - Data buffer
+;           D0 - Command
+;           D1 - Length
 PMGRsend:
             move.l  A0,-(SP)
             move.l  A0,-(SP)
@@ -4683,11 +4884,11 @@ SndWatch:
             rts
 PMgrOp:
             andi.w  #$600,D1
-            beq.w   .L13
+            beq.w   .PmgrTrap
             cmpi.w  #$400,D1
             beq.b   .IdleEnableDisable
             bcs.b   .IdleUpdate
-            bra.b   .L3
+            bra.b   .SerialPower
 .IdleEnableDisable:
             move    SR,-(SP)
             ori     #$300,SR
@@ -4725,7 +4926,7 @@ PMgrOp:
             move.l  (LastAct,A1),D0
             move    (SP)+,SR
             rts
-.L3:
+.SerialPower:
             bclr.l  #7,D0
             bne.w   .L7
             move.w  D0,D1
@@ -4834,7 +5035,7 @@ PMgrOp:
             lea     ($10,SP),SP
             moveq   #0,D0
             rts
-.L13:
+.PmgrTrap:
             movem.l A2-A0/D4-D1,-(SP)
             move    SR,-(SP)
             movea.l VIA,A1
@@ -4857,17 +5058,17 @@ PMgrOp:
 .L15:
             clr.b   (VIA_DDR_A-VIA_Base,A1)
             move    ($2,SP),SR
-            move.w  (TimeSCSIDB),D2
+            move.w  TimeSCSIDB,D2
             lsl.w   #2,D2
 .L16:
             btst.b  #1,(A1)
             beq.b   .L17
-            move.b  (HeapStart,A1),D0
+            move.b  (vBufA,A1),D0
             cmpi.b  #-1,D0
             beq.b   .L18
 .L17:
-            dbf     D2,.L16
-            move.l  #$FFFFCD38,D0
+            dbf     D2,.L16                         ; Loop until timeout
+            move.l  #pmBusyErr,D0                   ; Timeout occurred, set error
             bra.w   .L27
 .L18:
             ori.w   #$300,SR
@@ -4906,7 +5107,7 @@ PMgrOp:
             btst.b  #1,(A1)
             beq.b   .L24
             dbf     D2,.L23
-            move.l  #$FFFFCD37,D0
+            move.l  #pmReplyTOErr,D0
             bra.b   .L27
 .L24:
             clr.l   (A0)
@@ -4947,7 +5148,7 @@ PMgrOp:
             tst.w   D0
             rts
 FUN_00904558:
-            move.w  #$400,D2
+            move.w  #1024,D2
 FUN_0090455C:
             moveq   #0,D0
             move.b  #-1,(VIA_DDR_A-VIA_Base,A1)
@@ -4957,16 +5158,16 @@ FUN_0090455C:
             btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
             beq.b   .L2
             dbf     D1,.L1
-            move.l  #$FFFFCD36,D0
+            move.l  #pmSendStartErr,D0
             bra.b   SharedReturn_90455C
 .L2:
-            moveq   #$40,D2
+            moveq   #64,D2
             bset.b  #PMreq,(VIA_BufB-VIA_Base,A1)
 .L3:
             btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
             bne.b   SharedReturn_90455C
             dbf     D2,.L3
-            move.l  #$FFFFCD35,D0
+            move.l  #pmSendEndErr,D0
 SharedReturn_90455C:
             bset.b  #PMreq,(VIA_BufB-VIA_Base,A1)
             clr.b   (VIA_DDR_A-VIA_Base,A1)
@@ -4980,7 +5181,7 @@ FUN_009045A0:
             btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
             beq.b   .L2
             dbf     D2,.L1
-            move.l  #$FFFFCD34,D0
+            move.l  #pmRecvStartErr,D0
             bra.b   SharedReturn_90455C
 .L2:
             bclr.b  #PMreq,(VIA_BufB-VIA_Base,A1)
@@ -4990,7 +5191,7 @@ FUN_009045A0:
             btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
             bne.b   SharedReturn_90455C
             dbf     D2,.L3
-            move.l  #$FFFFCD33,D0
+            move.l  #pmRecvEndErr,D0
             bra.b   SharedReturn_90455C
 GoToSleep:
             btst.l  #9,D1
@@ -5206,9 +5407,587 @@ CheckAppleTalk:
             btst.b  #HasCharger,(Charger,A2)
             bne.w   .done
             btst.b  #5,PortBUse
-            
-
-
+            bne.b   .reqcase1
+            bsr.w   MPPClose
+            move.b  #ClosedMPP,(WakeWarn,A2)
+            bra.w   .okexit
+.reqcase1:
+            bsr.w   XPPCheck
+            bne.w   .done
+            bsr.w   MPPClose
+            move.b  #2,(WakeWarn,A2)
+            bra.w   .okexit
+.dmndcase:
+            cmpi.b  #SleepDemand,D0
+            bne.b   .nowcase
+            btst.b  #noATChg,ChooserBits
+            bne.b   .dmndcase1
+            bsr.w   HarshWarn
+            bne.b   .done
+            bsr.w   AllClose
+            move.b  #ClearedChsr,($6C,A2)
+            bset.b  #noATChg,ChooserBits
+            bra.b   .okexit
+.dmndcase1:
+            btst.b  #XPPLoadedBit,PortBUse
+            bne.b   .dmndcase2
+            bsr.b   WimpyWarn
+            bne.b   .done
+            bsr.b   MPPClose
+            move.b  #ClosedMPP,(WakeWarn,A2)
+            bra.b   .okexit
+.dmndcase2:
+            bsr.w   XPPCheck
+            bne.b   .dmndcase3
+            bsr.b   WimpyWarn
+            bne.b   .done
+            bsr.b   MPPClose
+            move.b  #ClosedXPP,(WakeWarn,A2)
+            bra.b   .okexit
+.dmndcase3:
+            bsr.b   StrongWarn
+            bne.b   .done
+            bsr.w   AllClose
+            move.b  #ClosedSvr,(WakeWarn,A2)
+            bra.b   .okexit
+.nowcase:
+            move.b  #ClearedChsr,(WakeWarn,A2)
+            bset.b  #noATChg,ChooserBits
+            beq.b   .nowcase4
+            move.b  #ClosedMPP,(WakeWarn,A2)
+            btst.b  #XPPLoadedBit,PortBUse
+            bne.b   .nowcase4
+            move.b  #ClosedXPP,(WakeWarn,A2)
+            bsr.b   XPPCheck
+            beq.b   .nowcase4
+            move.b  #ClosedSvr,(WakeWarn,A2)
+.nowcase4:
+            bsr.b   AllClose
+.okexit:
+            moveq   #0,D0
+.done:
+            adda.w  #ioQElSize,SP
+            movem.l (SP)+,D1-D2/A0-A3
+            tst.w   D0
+            rts
+StrongWarn:
+            move.w  #-16386,D0
+            bra.b   Warn
+WimpyWarn:
+            move.w  #-16387,D0
+            bra.b   Warn
+HarshWarn:
+            move.w  #-16388,D0
+            bra.w   Warn
+Warn:
+            clr.w   -(SP)
+            move.w  D0,-(SP)
+            clr.l   -(SP)
+            _Alert
+            move.w  (SP)+,D0
+            subq.w  #2,D0
+            rts
+MPPClose:
+            movea.l A3,A0
+            move.w  #MPPUnitNum,(ioRefNum,A0)
+            _Close
+            tst.w   D0
+            rts
+XPPCheck:
+            movea.l A3,A0
+            lea     XPPName,A1
+            move.l  A1,($12,A0)
+            clr.b   ($1B,A0)
+            _Open
+            _Close
+            tst.w   D0
+            rts
+AllClose:
+            movea.l A3,A0
+            lea     XPPName,A1
+            move.l  A1,(ioVNPtr,A0)
+            clr.b   ($1B,A0)
+            _Open
+            move.w  #CloseAll,(csCode,A0)
+            _Control
+            _Close
+            move.w  #MPPUnitNum,(ioRefNum,A0)
+            _Close
+            tst.w   D0
+            rts
+KbdReset:
+            jsr     RSetKMap
+            moveq   #numFDBAdr,D1
+            movea.l ADBBase,A1
+            bra.b   .L1
+.loop:
+            adda.w  #FRecSize,A1
+.L1:
+            moveq   #2,D0
+            cmp.b   (FDBOAddr,A1),D0
+            bne.b   .notkbd
+            movea.l (FDBOpData,A1),A0
+            lea     (4,A0),A0
+            moveq   #0,D0
+            move.l  D0,(A0)+
+            move.l  D0,(A0)+
+            move.l  D0,(A0)+
+            move.l  D0,(A0)+
+.notkbd:
+            dbf     D1,.loop
+            rts
+SlpQInstall:
+            cmpi.w  #slpQType,(SleepqType,A0)
+            bne.b   .SlpQErr
+            movea.l PowerMgrVars,A1
+            lea     (2,A1),A1
+            _Enqueue
+            moveq   #0,D0
+            rts
+.SlpQErr:
+            moveq   #SlpTypeErr,D0
+            rts
+SlpQRemove:
+            cmpi.w  #$10,(SleepqType,A0)
+            bne.b   .SlpQErr
+            movea.l PowerMgrVars,A1
+            lea     (2,A1),A1
+            _Dequeue
+            moveq   #0,D0
+            rts
+.SlpQErr:
+            moveq   #SlpTypeErr,D0
+            rts
+PowerOff:
+            subq.w  #4,SP
+            movea.l SP,A0
+            move.b  #8,(A0)
+            moveq   #1,D1
+            moveq   #$10,D0
+            bsr.w   PMGRsend
+            movea.w #$3C,A0
+            _Delay
+            movea.l SP,A0
+            move.b  #$5B,(A0)
+            moveq   #1,D1
+            moveq   #$10,D0
+            bsr.w   PMGRsend
+            movea.l SP,A0
+            clr.l   (A0)
+            moveq   #0,D1
+            moveq   #$21,D0
+            bsr.w   PMGRsend
+            addq.w  #4,SP
+            _HideCursor
+            clr.l   WarmStart
+            move.w  #6,D0
+            _Sleep
+            jmp     StartBoot
+XPPName:
+            dc.b    4
+            dc.b    '.XPP'
+            ds.b    1
+SysBeep:
+            movem.l A6-A1/D7-D0,-(SP)
+            move    SR,D0
+            andi.w  #$700,D0
+            bne.b   .done
+            tst.b   SoundActive
+            bne.b   .flash
+            tst.b   SdVolume
+            bne.b   getSoundId
+.flash:
+            tst.b   WWExist
+            bne.b   .done
+            clr.l   -(SP)
+            _FlashMenuBar
+            suba.l  A0,A0
+            addq.w  #8,A0
+            _Delay
+            _FlashMenuBar
+            bra.b   .done
+.getSoundId:
+            clr.w   -(SP)
+            movea.l SP,A0
+            move.l  #$2007C,D0
+            _ReadXPRam
+            move.w  (SP),D0
+.getsound:
+            clr.l   -(SP)
+            move.l  'snd ',-(SP)
+            move.w  D0,-(SP)
+            move.b  ResLoad,D4                      ; Save ResLoad
+            move.b  #1,ResLoad
+            _RGetResource
+            move.b  D4,ResLoad                      ; Restore ResLoad
+            movea.l (SP)+,A0
+            clr.w   -(SP)
+            clr.l   -(SP)
+            move.l  A0,-(SP)
+            clr.w   -(SP)
+            _SndPlay
+            move.w  (SP)+,D0
+            move.w  (SP)+,D1
+            tst.w   D0
+            beq.b   .done
+            cmpi.w  #1,D1
+            beq.b   .flash
+            move.w  #1,D0
+            move.w  D0,-(SP)
+            bra.b   .getsound
+.done:
+            movem.l (SP)+,D0-D7/A1-A6
+            movea.l (SP)+,A0
+            addq.w  #2,SP
+            jmp     (A0)
+BootBeep:
+            mov.l   A6,D6
+            lea     BootBeepData,A4
+            BSR6    DoBeep
+            movea.l D6,A6
+            rts
+ErrorBeep1:
+            lea     ErrorBeep1Data,A4
+            bra.b   DoBeep
+ErrorBeep2:
+            lea     ErrorBeep2Data,A4
+            bra.b   DoBeep
+ErrorBeep3:
+            lea     ErrorBeep3Data,A4
+            bra.b   DoBeep
+ErrorBeep4:
+            lea     ErrorBeep4Data,A4
+DoBeep:
+            clr.b   (ascMode,A3)
+            clr.b   (ascClockRate,A3)
+            move.w  (A4)+,D0
+            lsl.w   #2,D0
+            tst.b   ($800,A3)
+            bne.b   .L1
+            lsr.w   #5,D0
+.L1:
+            move.b  D0,(ascVolControl,A3)
+            move.b  #1,D0
+            tst.b   ($800,A3)
+            bne.b   .L2
+            clr.b   D0
+.L2:
+            move.b  D0,(ascChipControl,A3)
+            lea     ($810,A3),A0
+            moveq   #32-1,D3
+.L3:
+            clr.b   (A0)+
+            dbf     D3,.L3
+            move.b  #-2,(A0)+
+            move.b  #-2,(A0)+
+            move.b  #-2,(A0)+
+            move.b  #-2,(A0)+
+            move.b  #-2,(A0)+
+            move.b  #-2,(A0)+
+            move.b  #-2,(A0)+
+            move.b  #$FE,(A0)+
+            move.b  #2,(ascMode,A3)
+            clr.b   (ascFifoControl,A3)
+            move.l  #$C001FF40,D3
+            tst.b   ($800,A3)
+            bne.b   .L4
+            move.l  #$30013F10,D3
+.L4:
+            movea.l A3,A0
+            moveq   #1,D0
+.L5:
+            move.l  D3,D1
+.L6:
+            moveq   #$3F,D2
+.L7:
+            move.b  D1,($600,A0)
+            move.b  D1,($400,A0)
+            move.b  D1,($200,A0)
+            move.b  D1,(A0)+
+            dbf     D2,.L7
+            lsr.l   #8,D1
+            bne.b   .L6
+            dbf     D0,.L5
+            movem.l (A4)+,D0-D2
+            move.w  (A4)+,D3
+            moveq   #0,D5
+            lea     ($814,A3),A5
+            movea.l A3,A0
+            lea     ($200,A3),A1
+            bra.b   .L11
+.L8:
+            move.b  (A0),D7
+            movea.l A0,A2
+            addq.w  #1,A0
+            cmpa.l  A0,A1
+            bhi.b   .L9
+            movea.l A3,A0
+.L9:
+            add.b   (A0),D7
+            roxr.b  #1,D7
+            move.b  D7,($600,A0)
+            move.b  D7,($400,A0)
+            move.b  D7,($200,A0)
+            move.b  D7,($0,A0)
+            move.w  D0,D4
+.L10:
+            subq.w  #1,D4
+            bpl.b   .L10
+.L11:
+            tst.w   D3
+            beq.b   .L12
+            dbf     D5,.L12
+            move.w  D1,D5
+            move.b  (A4)+,(A5)+
+            move.b  (A4)+,(A5)+
+            move.b  (A4)+,(A5)+
+            move.b  (A4)+,(A5)+
+            addq.l  #4,A5
+            subq.w  #1,D3
+.L12:
+            clr.b   (A0)+
+            clr.b   (A0)+
+            clr.b   (A0)+
+            clr.b   (A0)+
+            addq.l  #4,A0
+            dbf     D2,.L13
+            clr.b   ($801,A3)
+            jmp     (A6)
+BootBeepData:
+            dc.l    $2040000
+            dc.l    $E0000
+            dc.l    $780000
+            dc.l    $75300004
+            dc.l    $18000
+            dc.l    $20000
+            dc.l    $18179
+            dc.l    $30000
+ErrorBeep1Data:
+            dc.l    $6070000
+            dc.l    $640000
+            dc.l    $0
+            dc.l    $13880004
+            dc.l    $C09C
+            dc.l    $E0B6
+            dc.l    $120EA
+            dc.l    $182B1
+ErrorBeep2Data:
+            dc.l    $5060000
+            dc.l    $320000
+            dc.l    $8980000
+            dc.l    $4E200001
+            dc.l    $30272
+ErrorBeep3Data:
+            dc.l    $5060000
+            dc.l    $320000
+            dc.l    $8980000
+            dc.l    $4E200002
+            dc.l    $30272
+            dc.l    $48524
+ErrorBeep4Data:
+            dc.l    $6070000
+            dc.l    $320000
+            dc.l    $8980000
+            dc.l    $61A80004
+            dc.l    $143EF
+            dc.l    $194EB
+            dc.l    $1E5E7
+            dc.l    $28957
+CTrapTbl:
+            dc.w    GetCSize-CTrapTbl
+            dc.w    SetCSize-CTrapTbl
+            dc.w    GetApZnSiz-CTrapTbl
+            dc.w    SetApZnSiz-CTrapTbl
+            dc.w    GetMaxCXfr-CTrapTbl
+            dc.w    SetMaxCXfr-CTrapTbl
+            dc.w    GetCStatus-CTrapTbl
+            dc.w    SetCStatus-CTrapTbl
+CacheTrap:
+            cmpi.w  #8,D0
+            bcs.b   .L1
+            moveq   #ParamErr,D0
+            rts
+.L1:
+            lea     CTrapTbl,A1
+            add.w   D0,D0
+            adda.w  (A1,D0),A1
+            jmp     (A1)
+CTExit:
+            jmp     CmdDone
+GetCSize:
+            jsr     FSQueueSync
+            movea.l CacheVars,A1
+            move.l  (OldBufPtr,A1),D0
+            sub.l   (NewBufPtr,A1),D0
+            move.l  D0,(ioMisc,A0)
+            moveq   #0,D0
+            bra.s   CTExit
+SetCSize:
+            jsr     FSQueueSync
+            move.l  (ioMisc,A0),D0
+            moveq   #15,D1
+            lsr.l   D1,D0
+            move.b  D0,SPMisc1
+            moveq   #0,D0
+            bra.b   CTExit
+GetApZnSiz:
+            jsr     FSQueueSync
+            movea.l CacheVars,A1
+            move.l  (CacheMinZn,A1),(ioMisc,A0)
+            moveq   #0,D0
+            bra.b   CTExit
+SetApZnSiz:
+            jsr     FSQueueSync
+            movea.l CacheVars,A1
+            move.l  (ioMisc,A0),(CacheMinZn,A1)
+            moveq   #0,D0
+            bra.b   CTExit
+GetMaxCXfr:
+            jsr     FSQueueSync
+            movea.l CacheVars,A1
+            move.l  (CacheByteLim,A1),(ioMisc,A0)
+            moveq   #0,D0
+            bra.b   CTExit
+SetMaxCXfr:
+            jsr     FSQueueSync
+            movea.l CacheVars,A1
+            move.l  (OldBufPtr,A1),D0
+            sub.l   (NewBufPtr,A1),D0
+            move.l  (ioMisc,A0),D1
+            cmp.l   D1,D0
+            bcc.b   .L1
+            moveq   #ParamErr,D0
+            bra.w   CTExit
+.L1:
+            move.l  D1,(CacheByteLim,A1)
+            moveq   #0,D0
+            bra.w   CTExit
+GetCStatus:
+            jsr     FSQueueSync
+            movea.l CacheVars,A1
+            moveq   #0,D0
+            tst.b   (CurEnable,A1)
+            beq.b   .L1
+            btst.b  #5,SPMisc2
+            beq.b   .L1
+            moveq   #1,D0
+.L1:
+            move.l  D0,(ioMisc,A0)
+            moveq   #0,D0
+            bra.w   CTExit
+SetCStatus:
+            jsr     FSQueueSync
+            tst.l   (ioMisc,A0)
+            beq.b   .L1
+            bset.b  #5,SPMisc2
+            bra.b   .L2
+.L1:
+            bclr.b  #5,SPMisc2
+.L2:
+            moveq   #0,D0
+            bra.w   CTExit
+EnqueueTrap:
+            move    SR,-(SP)
+            addq.w  #2,A1
+            ori     #HiIntMask,SR
+            clr.l   (A0)
+            tst.l   (A1)+
+            bne.b   .DoQueueInsert
+            move.l  A0,(A1)
+            move.l  A0,-(A1)
+            bra.b   .EnqueueDone
+.DoQueueInsert:
+            move.l  A2,-(SP)
+            movea.l (A1),A2
+            move.l  A0,(A2)
+            move.l  A0,(A1)
+            movea.l (SP)+,A2
+            subq.w  #4,A1
+.EnqueueDone:
+            subq.w  #2,A1
+            move    (SP)+,SR
+            rts
+DequeueTrap:
+            move    SR,-(SP)
+            movem.l A3-A2,-(SP)
+            ori     #HiIntMask,SR
+            morea.l (qHead,A1),A2
+            movea.l A2,A3
+.QDelSearch:
+            cmpa.l  A3,A0
+            beq.b   .GoDel
+            movea.l A3,A2
+            movea.l (qLink,A2),A3
+            cmpa.l  (qTail,A1),A2
+            bne.b   .QDelSearch
+            moveq   #-1,D0
+            bra.b   .QDone1
+.GoDel:
+            cmpa.l  A2,A3
+            bne.b   .QUnlink
+            move.l  (qLink,A2),(qHead,A1)
+            bne.b   .QDelDone
+            clr.l   (qTail,A1)
+.QDelDone:
+            moveq   #0,D0
+.QDone1:
+            movem.l (SP)+,A2/A3
+            move    (SP)+,SR
+            rts
+.QUnlink:
+            move.l  (qLink,A3),(qLink,A2)
+            cmpa.l  (qTail,A1),A3
+            bne.b   .QDelDone
+            move.l  A2,(qTail,A1)
+            bra.b   .QDelDone
+InitQueue:
+            clr.w   (A1)+
+            clr.l   (A1)+
+            clr.l   (A1)
+            subq.w  #6,A1
+            rts
+EMT1010_TrapDispatch:
+            move.w  D3,-(SP)
+            move.l  A2,-(SP)
+            movea.l (8,SP),A2
+            move.w  (A2)+,D3
+            cmpi.w  #$A800,D3
+            bcs.b   .L4
+.L1:
+            add.w   D3,D3
+            add.w   D3,D3
+            subi.w  #$B000,D3
+            bcc.b   .L2
+            move.l  A2,(8,SP)
+            movea.w D3,A2
+            move.w  (4,SP),D3
+            move.l  ($1E00,A2),(4,SP)
+            movea.l (SP)+,A2
+            rts
+.L2:
+            movea.l D3,A2
+            move.l  ($E00,A2),(8,SP)
+            movea.l (SP)+,A2
+            move.w  (SP),D3
+            addq.w  #4,SP
+            rts
+.L3:
+            move.w  D3,(SP)
+            move.l  A2,-(SP)
+            movea.l (6,SP),A2
+            move.w  (A2)+,D3
+            cmpi.w  #-$5800,D3
+            bcc.b   .L1
+.L4:
+            move.l  A2,(8,SP)
+            move.l  D2,-(SP)
+            move.l  D1,-(SP)
+            move.l  A1,-(SP)
+            move.w  D3,D1
+            andi.w  #$100,D3
+            bne.b   .L5
+            move.l  A0,-(SP)
+            move.b  D1,D3
 
 
 
@@ -5222,7 +6001,7 @@ CallText:
             movea.l (A0),A0                         ; Get current grafport
             move.l  (GRAFPROCS,A0),D0               ; Is grafprocs nil?
             movea.l (JStdTEXT),A0                   ; Get piece of trap table
-            beq.b   .USESTD                          ; Yes, use std proc
+            beq.b   .USESTD                         ; Yes, use std proc
             movea.l D0,A0
             movea.l (A0),A0                         ; No, get proc ptr
 .USESTD:
@@ -5283,4 +6062,50 @@ DrawText:
 StringWidth:
             movea.l (SP)+,A1
 
+            
+PinGuts:
+            cmp.w   (2,A0),D0
+            bge.b   .L1
+            move.w  (2,A0),D0
+.L1:
+            cmp.w   (6,A0),D0
+            blt.b   .L2
+            move.w  (6,A0),D0
+            subq.w  #1,D0
+.L2:
+            swap    D0
+            cmp.w   (A0),D0
+            bge.b   .L3
+            move.w  (A0),D0
+.L3:
+            cmp.w   (4,A0),D0
+            blt.b   .L4
+            move.w  (4,A0),D0
+            subq.w  #1,D0
+.L4:
+            swap    D0
+            rts
+PinRect:
+            move.l  (4,SP),D0
+            movea.l (8,SP),A0
+            bsr.b   PinGuts
+            movea.l (SP)+,A0
+            addq.w  #8,SP
+            move.l  D0,(SP)
+            jmp     (A0)
+DispTable:
 
+
+
+
+            org     $938FF8
+            dc.b    'MSHGGDRWHCSLEMTDAFCCHSESRLESRCSWCGMR'
+            dc.b    '[(c) Copyright Apple Computer, Inc. 1989]'
+
+
+            dc.b    'MSHGGDRWHCSLEMTDAFCCHSESRLESRCSWCGMR'
+            dc.b    '[(c) Copyright Apple Computer, Inc. 1989]'
+            dc.b    'MSHGGDRWHCSLEMTDA'
+            dc.b    $11
+            dc.b    'Tue, Jul 18, 1989'
+            dc.b    $12

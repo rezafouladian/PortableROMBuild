@@ -2,8 +2,6 @@ HeapStart       EQU         $1E00
 DtskQHdr_Flags  EQU         $D92
 JHideCursor     EQU         $800
 JShowCursor     EQU         $804
-GrafBegin       EQU         $800
-GrafEnd         EQU         $8F2
 MacsBugDMnext   EQU         $CAC
 
 VIA_BufB        EQU         $F70000
