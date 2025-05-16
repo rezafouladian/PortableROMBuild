@@ -5312,7 +5312,7 @@ WakeUp:
             move.b  (VIA_Base-VIA_T1C_H,A0),(VIA_Base-VIA_T1C_H,A0)
             move.l  (SP)+,ResetVector
             jsr     InitSCSI                        ; Init the SCSI chip
-            lea     TimeLM,A0
+            lea     Time,A0
             moveq   #timeRead,D0
             bsr.w   PMGRrecv
             moveq   #3,D0
@@ -6062,7 +6062,9 @@ DrawText:
 StringWidth:
             movea.l (SP)+,A1
 
-            
+
+
+
 PinGuts:
             cmp.w   (2,A0),D0
             bge.b   .L1
@@ -6094,6 +6096,1411 @@ PinRect:
             move.l  D0,(SP)
             jmp     (A0)
 DispTable:
+
+
+
+            org     $929C2C
+EDiskDRVR:
+            dc.w    $4F00
+            dc.w    0
+            dc.w    0
+            dc.w    0
+            dc.w    EDiskOpen-EDiskDRVR
+            dc.w    EDiskPrime-EDiskDRVR
+            dc.w    EDiskControl-EDiskDRVR
+            dc.w    EDiskStatus-EDiskDRVR
+            dc.w    EDiskClose-EDiskDRVR
+            dc.b    6,'.EDisk'
+            align   2
+StatusDecode:
+            dc.w    statFmtLst-(*+4)
+            dc.w    fmtLstCode
+            dc.w    statDrvSts-(*+4)
+            dc.w    drvStsCode
+            dc.w    statDrvSize-(*+4)
+            dc.w    drvSizeCode
+            dc.w    -1
+            dc.w    StatusErr
+ControlDecode:
+            dc.w    ctlKillIO-(*+4)
+            dc.w    killCode
+            dc.w    ctlVerify-(*+4)
+            dc.w    VerifyCC
+            dc.w    ctlFormat-(*+4)
+            dc.w    FormatCC
+            dc.w    ctlEject-(*+4)
+            dc.w    EjectCode
+            dc.w    ctlDriveIcon-(*+4)
+            dc.w    IconCC
+            dc.w    ctlMediaIcon-(*+4)
+            dc.w    IconLogCC
+            dc.w    ctlDriveInfo-(*+4)
+            dc.w    infoCC
+            dc.w    -1
+            dc.w    ControlErr
+InitTable:
+            dc.l    slim1RegBase+slimStatusReg      ; SLIM 1 poll pointer
+            dc.w    SLIMDiskHandler-(*+2)           ; SLIM handler function
+            dc.w    SLIMDiskMediaIcon-(*+2)         ; SLIM disk media icon pointer
+            dc.w    LowerDriveIcon-(*+2)            ; SLIM disk lower drive icon pointer
+            dc.w    SlimDrive1Name-(*+2)            ; SLIM drive 1 name pointer
+            dc.l    (1<<4)+(1<<1)
+            dc.b    (1<<CreateWithXSums)
+            dc.b    2
+            dc.l    slim0RegBase+slimStatusReg      ; SLIM 0 poll pointer
+            dc.w    SLIMDiskHandler-(*+2)           ; SLIM handler function
+            dc.w    SLIMDiskMediaIcon-(*+2)         ; SLIM disk media icon pointer
+            dc.w    UpperDriveIcon-(*+2)            ; SLIM disk upper drive icon pointer
+            dc.w    SlimDrive0Name-(*+2)            ; SLIM drive 0 name pointer
+            dc.l    (1<<11)+(1<<4)+(1<<1)
+            dc.b    (1<<CreateWithXSums)
+            dc.b    2
+            dc.l    0                               ; RamDisk doesn't have poll pointer
+            dc.w    RAMDiskHandler-(*+2)            ; RamDisk handler function
+            dc.w    RAMDiskMediaIcon-(*+2)
+            dc.w    RAMDiskDriveIcon-(*+2)
+            dc.w    RAMDiskName-(*+2)               ; RamDisk drive name pointer
+            dc.l    (1<<10)+(1<<4)
+            dc.b    (1<<CreateWithXSums)
+            dc.b    $48
+PrimaryROMdisk:
+            dc.l    0                               ; RomDisk doesn't have poll pointer
+            dc.w    ROMDiskHandler-(*+2)            ; RomDisk handler function
+            dc.w    ROMDiskMediaIcon-(*+2)
+            dc.w    ROMDiskDriveIcon-(*+2)
+            dc.b    ROMDiskName-(*+2)               ; RomDisk drive name pointer
+            dc.l    (1<<10)+(1<<4)+(1<<1)+(1<<0)
+            dc.b    (1<<CreateWithXSums)
+            dc.b    $8
+SecondaryROMdisk:
+            dc.l    0                               ; RomDisk doesn't have poll pointer
+            dc.w    ROMDiskHandler-(*+2)            ; RomDisk handler function
+            dc.w    ROMDiskMediaIcon-(*+2)
+            dc.w    ROMDiskDriveIcon-(*+2)
+            dc.b    ROMDiskName-(*+2)               ; RomDisk drive name pointer
+            dc.l    (1<<11)+(1<<10)+(1<<4)+(1<<1)+(1<<0)
+            dc.b    (1<<CreateWithXSums)
+            dc.b    $8
+; EDiskOpen
+;
+; Inputs:   A0  Pointer to I/O ParamBlock
+;           A1  Pointer to Device Control Entry (DCE)
+; Outputs:  D0  Result code (noErr/openErr)
+EDiskOpen:
+            move.l  A0,-(SP)                        ; Save pointer to I/O param block
+            move.l  (DCtlRefNum,A1),D7
+            move.w  #5,D7
+            move.l  DrvQHdr+qHead,D0
+            beq.b   .FoundDriveNumber               ; If drive queue is empty
+.NextDriveQueue:
+            movea.l D0,A0
+            cmp.w   (DQDrive,A0),D7
+            bcc.b   .NextDriveNumber
+            move.w  (DQDrive,A0),D7
+.NextDriveNumber:
+            move.l  (qLink,A0),D0                   ; Check next drive queue element
+            bne.b   .NextDriveQueue
+.FoundDriveNumber:
+            addq.w  #1,D7                           ; D7 = next drive number
+            lea     InitTable,A6                    ; A6 = assume pointer to 68k initial values
+            moveq   #0,D6
+            moveq   #0,D5
+            move    SR,-(SP)
+            ori     #HiIntMask,SR
+            move.l  BusErrorVector,-(SP)
+            lea     .L1,A0
+            move.l  A0,BusErrorVector
+            movea.l SP,A2
+            moveq   #8,D0
+            and.w   AccessBase,D0
+            beq.b   .L1
+            tst.w   slim0RegBase
+            tst.w   slim1RegBase
+            move.l  #slim1RamBase,D6
+            move.l  #slim0RamBase,D5
+            lea     slimAdapterROM,A0
+            cmpi.l  #'SLIM',(AO)+
+            bne.b   .L1
+            cmpi.l  #' ROM',(A0)+
+            bne.b   .L1
+            jsr     (A0)
+.L1:
+            movea.l A2,SP
+            move.l  (SP)+,BusErrorVector
+            move    (SP)+,SR
+            moveq   #0,D1
+            moveq   #0,D2
+            moveq   #0,D3
+            movea.l D6,A2
+            tst.l   D6
+            bsr.w   CreateEDrive
+            movea.l D5,A2
+            tst.l   D5
+            bsr.w   CreateEDrive
+            subq.l  #2,SP
+            movea.l SP,A0
+            move.l  #$10076,D0
+            _ReadXPRam
+            moveq   #0,D0
+            move.b  (SP)+,D0
+            swap    D0
+            suba.l  A2,A2
+            move.l  MemTop,D3
+            move.l  D3,D1
+            sub.l   D0,D1
+            cmp.l   BufPtr,D1
+            bge.b   .L2
+            move.l  D3,D1
+.L2:
+            cmp.l   D1,D3
+            beq.b   .noDisk
+            move.l  D0,D6
+            bsr.w   CreateEDrive                    ; Create the RAM disk
+.noDisk:
+            movea.l ROMBase,A2                      ; Start searching at the base of ROM
+.RomDiskLoop:
+            bsr.w   CheckForRomDisk                 ; See if it is a ROM disk
+            bne.b   .NextRomDisk                    ; If not, try the next block
+            moveq   #0,D1                           ; Assume no checksums unless header says otherwies
+            move.l  A2,D2
+            move.l  A2,D3
+            bsr.b   CreateEDrive                    ; Create the ROM disk
+            lea     SecondaryROMdisk,A6             ; All future ROM disks are secondary
+.NextRomDisk:
+            adda.l  #RomDiskAlign,A2                ; Point to next block to check
+            cmpa.l  #RomSpaceEnd,A2                 ; See if end reached
+            bcs.b   .RomDiskLoop                    ; Search the entire space
+            moveq   #OpenErr,D0                     ; If no drives found, return OpenErr
+            swap    D7                              ; D7 low = driver ref num
+            lea     DrvQHdr+qHead,A0                ; Point to the drive queue head
+.CheckNeXTDrive:
+            move.l  (qLink,A0),D1                   ; Check next drive queue element
+            beq.b   .OpenDone                       ; If end of queue, and not found, kill the open
+            movea.l D1,A0                           ; A0 = drive queue element
+            cmp.w   (dQRefNum,A0),D7                ; Is this one of ours
+            bne.b   .CheckNeXTDrive                 ; If not, check the next one
+            move.l  #EDiskVarsSize,D0               ; Size of block to allocate
+            _NewPtrSysClear                         ; Allocate memory for globals
+            movea.l A0,A2                           ; A2 = pointer to globals
+            move.l  A2,(DCtlStorage,A1)             ; Save globals pointer in DCE
+            move.l  A1,(DCEpointer,A2)              ; Save pointer to DCE in globals
+            move.l  .exit,(FindDqePatch,A2)         ; Initialize FindDQE patch routine
+            move.l  .exit,(PrimePatch,A2)           ; Initialize Prime patch routine
+            move.l  D6,($140,A2)
+            lea     .EDiskPollTask,A4
+            moveq   #8-1,D4                         ; Loop counter (8 times)
+.InitPolling:
+            lea     (VTask,A2),A0                   ; A0 = pointer to VTask
+            jsr     (A4)                            ; Poll 8 times to init inserted status,
+            dbf     D4,.InitPolling                 ; mount drives, and compute sizes
+            lea     (VTask,A2),A0                   ; A0 = pointer to VTask
+            addq.w  #vType,(qType,A0)               ; Initialize qType field
+            move.l  A4,(vblAddr,A0)                 ; Initialize vblAddr field
+            _VInstall                               ; Install the VBL task
+            moveq   #NoErr,D0                       ; No error
+.OpenDone:
+            movea.l (SP)+,A0                        ; Restore pointer to I/O param block
+            move.w  D0,(ioResult,A0)                ; Return open status in ioResult
+.exit:
+            rts
+; CreateEDrive
+; 
+; Creates and initializes the EDiskDriveInfo for the specified EDisk, and installs the
+; drive queue entry for it.
+CreateEDrive:
+            beq.b   .Done                           ; Skip it if not used
+            moveq   #EDiskDriveInfoSize,D0          ; Size of info to allocate
+            _NewPtrSysClear                         ; Allocate the drive info
+            bne.b   .Done                           ; If can't allocate, don't create drive
+            movea.l A6,A3                           ; A3 = running pointer to the init table entry
+            move.l  (A3)+,(A0)+
+            movea.w (A3)+,A4
+            adda.l  A3,A4
+            move.l  A4,(A0)+
+            move.l  A2,(A0)+
+            addq.w  #8,A0
+            move.l  D1,(A0)+
+            move.l  D2,(A0)+
+            move.l  D3,(A0)+
+            moveq   #2,D0
+.L1:
+            moveaw  (A3)+,A4
+            adda.l  A3,A4
+            move.l  A4,(A0)+
+            dbf     D0,.L1
+            move.l  (A3)+,(A0)+
+            move.w  (A3)+,(A0)+
+            move.b  #%01010101,(A0)
+            addq.w  #6,A0
+            addq.w  #1,(qType,A0)                   ; Use long drive size format
+            addq.w  #1,(Installed,A0)
+            move.l  D7,D0                           ; Get disk drive number, and refNum
+            swap    D0                              ; Move to high word, refNum to low word
+            _AddDrive                               ; Add the drive to the drive queue
+.Done:
+            addq.w  #1,D7                           ; Update drive number
+            adda.w  #InitEntrySize,A6               ; Point to next drive init entry
+            rts
+; CheckForRomDisk
+CheckForRomDisk:
+            move    SR,-(SP)                        ; Save old interrupt mask
+            ori     #HiIntMask,SR                   ; Disable interrupts
+            move.l  BusErrorVector,-(SP)            ; Save old bus error vector
+            lea     .NotFound,A0                    ; New handler address
+            move.l  A0,BusErrorVector               ; Setup bus error handler
+            movea.l SP,A4                           ; Mark the stack
+            lea     .HeaderTemplate,A3              ; Point to expected values
+            lea     (HdrBlockSize,A2),A0            ; Point to header data
+            moveq   #(HdrDeviceSize-HdrBlockSize)/4-1,D0
+.SigCmpLoop:
+            cmpm.l  (A0)+,(A3)+
+            dbne    D0,.SigCmpLoop
+.NotFound:
+            movea.l A4,SP                           ; Pop stack in case of bus error
+            move.l  (SP)+,BusErrorVector            ; Restore bus error vector
+            move    (SP)+,SR                        ; Restore interrupt mask
+            addq.w  #1,D0                           ; See if we had a match
+            bne.b   .Done                           ; Exit if not
+            move.l  D7,D1                           ; Get driver ref num
+            swap    D1                              ; D1 low = driver ref num
+            lea     DrvQHdr+qHead,A0                ; Point to the drive queue head
+.CheckNeXTDrive:
+            move.l  (qLink,A0),D0                   ; Check next drive queue element
+            beq.b   .Done                           ; If not found, it's unique (D0 = 0)
+            movea.l D0,A0                           ; A0 = drive queue element
+            cmp.w   (dQRefNum,A0),D1                ; Is this one of ours
+            bne.b   .CheckNeXTDrive                 ; If not, check the next one
+            cmpi.b  #romDiskType,(DriveInfo+3,A0)
+            bne.b   .CheckNeXTDrive
+            moveq   #EDiskHeaderSize/4-1,D0
+            movea.l A2,A3
+            movea.l (HeaderInfoPtr,A0),A4
+.HdrCmpLoop:
+            cmpm.l  (A3)+,(A4)+
+            dbne    D0,.HdrCmpLoop
+            bne.b   .CheckNeXTDrive
+.Done:
+            tst.l   D0
+            rts
+; EDiskClose
+EDiskClose:
+            moveq   #closErr,D0
+            rts
+; EDiskPrime
+EDiskPrime:
+            move.w  (ioTrap,A0),-(SP)
+            moveq   #0,D4
+            movem.l A1-A0/D4,-(SP)
+            bsr.w   FindDQE
+            bne.w   .PrimeAbort
+            moveq   #ParamErr,D0
+            move.l  (ioByteCount,A0),D1
+            beq.b   .PrimeAbort
+            move.l  (dCtlPosition,A1),D2
+            movem.l (CheckSumPtr,A3),A4-A6
+            adda.w  D2,A5
+            suba.l  A5,A6
+            cmpa.l  D1,A6
+            blt.b   .PrimeAbort
+            move.l  D1,D7
+            or.l    D2,D7
+            andi.w  #$1FF,D7
+            bne.b   .PrimeAbort
+            move.l  (ioBuffer,A0),D6
+            moveq   #rdVerify,D7
+            and.w   (IOPosMode,A0),D7
+            sne     D7
+            neg.b   D7
+            cmpi.b  #aWrCmd,(ioTrap+1,A0)
+            movea.l A5,A0
+            movea.l D6,A1
+            bne.b   .paramsOK
+            moveq   #2,D7
+            exg     A0,A1
+            moveq   #wPrErr,D0
+            tst.b   (WriteProtected,A3)
+            bmi.b   .PrimeAbort
+            moveq   #EnableEDiskWrites,D0
+            bsr.w   HWDependent
+.paramsOK:
+            roxr.b  #1,D6
+            addx.b  D7,D7
+            move.l  A4,D6
+            subq.l  #1,D6
+            roxl.w  #2,D7
+            lsr.l   #7,D2
+            adda.l  D2,A4
+            lea     .DispatchTable,A5
+            adda.w  (A5,D7),A5
+            jsr     (6,A2)
+            move.l  #$200,D3
+.BlockLoop:
+            moveq   #0,D5
+            moveq   #$7F,D2
+            jmp     (A5)
+.BlockDone:
+            add.l   D3,D4
+            sub.l   D3,D1
+            bhi.b   .BlockLoop
+.PrimeDone:
+            moveq   #3,D0
+            bsr.w   HWDependent
+            moveq   #0,D0
+.PrimeAbort:
+            movem.l (SP)+,D4/A0-A1
+            move.l  D4,($28,A0)
+            add.l   D4,($10,A1)
+            bra.w   EDiskDone
+.ReadWrite:
+            move.l  D1,D0
+            _BlockMove
+            move.l  D1,D4
+            bra.b   .PrimeDone
+.ReadEvenXsum:
+            moveq   #$3F,D2
+.ReadEvenLoop:
+            move.l  (A0)+,D7
+            add.l   D5,D5
+            addx.l  D7,D5
+            move.l  D7,(A1)+
+            move.l  (A0)+,D7
+            add.l   D5,D5
+            addx.l  D7,D5
+            move.l  D7,(A1)+
+            dbf     D2,.ReadEvenLoop
+.ReadDone:
+            cmo.l   (A4)+,D5
+            beq.b   .BlockDone
+            moveq   #-$48,D0
+            bra.b   .PrimeAbort
+.ReadOddXsum:
+            subq.l  #3,A1
+            move.l  (A1),D7
+            addq.l  #6,A5
+.ReadOddLoop:
+            move.l  (A0)+,D6
+            add.l   D5,D5
+            addx.l  D6,D5
+            rol.l   #8,D6
+            move.b  D6,D7
+            move.l  D7,(A1)+
+            move.l  D6,D7
+            dbf     D2,.ReadOddLoop
+            move.b  (3,A1),D7
+            move.l  D7,(A1)
+            bra.b   .ReadDone
+.VerifyEven:
+            movea.l SP,A4
+.VerifyEvenLoop:
+            move.l  (A0)+,D7
+            add.l   D5,D5
+            addx.l  D7,D5
+            cmp.l   (A1)+,D7
+            dbne    D2,.VerifyEvenLoop
+            beq.b   .VerifyGood
+.VerifyError:
+            moveq   #-$44,D0
+            bra.b   .PrimeAbort
+.VerifyOddXsum:
+            lea     .VerifyOddLoop,A5
+.VerifyOddSetup:
+            subq.l  #1,A1
+            move.l  (A1)+,D6
+            rol.l   #8,D6
+            jmp     (A5)
+.VerifyOdd:
+            addq.l  #4,A5
+            bra.b   .VerifyOddSetup
+            movea.l SP,A4
+.VerifyOddLoop:
+            move.l  D6,D7
+            move.l  (A1)+,D6
+            rol.l   #8,D6
+            move.b  D6,D7
+            add.l   D5,D5
+            addx.l  D7,D5
+            cmp.l   (A0)+,D7
+            dbne    D2,.VerifyOddLoop
+            bne.b   .VerifyError
+.VerifyGood:
+            move.l  D5,(SP)
+            bra.b   .ReadDone
+.WriteEvenXsum:
+            moveq   #$3F,D2
+.WriteEvenLoop:
+            move.l  (A0)+,D7
+            add.l   D5,D5
+            addx.l  D7,D5
+            move.l  (A0)+,D7
+            add.l   D5,D5
+            addx.l  D7,D5
+            move.l  D7,(A1)+
+            dbf     D2,.WriteEvenLoop
+.WriteDone:
+            move.l  D5,(A4)+
+            bra.w   .BlockDone
+.WriteOddXsum:
+            subq.l  #1,A0
+            move.l  (A0)+,D7
+            rol.l   #8,D7
+            addq.l  #8,A5
+.WriteOddLoop:
+            move.l  (A0)+,D6
+            rol.l   #8,D6
+            move.b  D6,D7
+            add.l   D5,D5
+            addx.l  D7,D5
+            move.l  D7,(A1)+
+            move.l  D6,D7
+            dbf     D2,.WriteOddLoop
+            bra.b   .WriteDone
+.DispatchTable:
+            dc.w    .ReadEvenXsum-.DispatchTable
+            dc.w    .ReadWrite-.DispatchTable
+            dc.w    .ReadOddXsum-.DispatchTable
+            dc.w    .ReadWrite-.DispatchTable
+            dc.w    .VerifyEvenLoop-.DispatchTable
+            dc.w    .VerifyEven-.DispatchTable
+            dc.w    .VerifyOddXsum-.DispatchTable
+            dc.w    .VerifyOdd-.DispatchTable
+            dc.w    .WriteEvenXsum-.DispatchTable
+            dc.w    .ReadWrite-.DispatchTable
+            dc.w    .WriteOddXsum-.DispatchTable
+            dc.w    .ReadWrite-.DispatchTable
+; EDiskControl
+EDiskControl:
+            lea     ControlDecode,A2
+            bra.b   HandleControlStatus
+; EDiskStatus
+EDiskStatus:
+            lea     StatusDecode,A2
+            bra.b   HandleControlStatus
+HandleControlStatus:
+            move.w  (ioTrap,A0),-(SP)
+            pea     EDiskDone
+            move.w  (csCode,A0),D1
+.search:
+            move.l  (A2)+,D0
+            bmi.b   .exit
+            cmp.w   D0,D1
+            bne.b   .search
+            pea     (A2,D0.w)
+            bra.w   FindDQE
+.exit:
+            movea.l (dCtlStorage,A1),A2
+            rts
+ctlKillIO:
+            move.w  #immed,(4,SP)
+            moveq.l #ControlErr,D0
+            rts
+ctlEject:
+            move.l  D1,D0
+            bne.b   .EjectErr
+            bclr.b  #MountedFlag,(Flags,A3)
+            move.b  (DiskInPlace,A3),D0
+            ble.b   .EjectDone
+            subq.b  #8,D0
+            beq.b   .EjectDone
+            moveq   #EjectEDisk,D0
+            bsr.w   HWDependent
+.EjectDone:
+            moveq   #0,D0
+.EjectErr:
+            rts
+ctlFormat:
+            bne.w   .exit                           ; Return with error if no drive or offline
+            moveq   #EnableEDiskWrites,D0           ; Hardware dependent function code
+            bsr.w   HWDependent                     ; Enable writing to the EDisk
+            moveq   #paramErr,D0                    ; Assume parameter error
+            move.w  (A4),D1                         ; Get the format kind parameter
+            subq.w  #1,D1                           ; Only allow 0 or 1
+            bls.b   .CheckWrProt                    ; If in range, continue
+            addq.w  #2,D1                           ; -1 is a special case (destroys signature too)
+            bne.b   .exit                           ; If not -1, 0, or 1, return paramErr
+            cmpi.b  #ramDiskType,(DriveInfo+3,A3)   ; See if it is a RAM disk
+            bne.b   .exit                           ; If not, return the paramErr
+            lea     DrvQHdr,A1                      ; Get the queue header
+            movea.l A3,A0                           ; Get the RAM disk drive queue element
+            _Dequeue                                ; Remove it from the drive queue
+            moveq   #0,D6                           ; Fake RAM test passed
+            bra.b   .SkipTest                       ; Skip the test, and just clear it
+.CheckWrProt:
+            moveq   #wPrErr,D0                      ; Assume write protect error
+            tst.b   (WriteProtected,A3)             ; Can we write to this disk?
+            bmi.b   .exit                           ; Return write protect error if not
+            bsr.w   CreateEDiskHeader               ; Write out a signature
+            movem.l (CheckSumPtr,A3),A0-A1/A4       ; Get the checksum/start/end pointers
+            move.l  A0,D0
+            bne.b   .L1
+            movea.l A1,A0
+.L1:
+            moveq   #0,D6
+            movea.l A0,A1
+.TestLoop:
+            adda.w  #16384,A1                       ; Add 16KB
+            moveq   #4,D0                           ; Command #4
+            move.l  #$501,D7                        ; Test #5 (Reverse Mod 3), 1 pass
+            cmpa.l  A1,A4                           ; Have we reached the end?
+            blt.b   .SkipTest                       ; Yes, we're finshed
+            _TestManager                            ; Run the test
+            movea.l A1,A0
+            bra.b   .TestLoop
+.SkipTest:
+            movem.l (CheckSumPtr,A3),A0-A1/A4       ; Get the checksum/start/end pointers
+            move.l  A0,D2                           ; See if it has checksums, assume no error
+            bne.b   .ClearDisk                      ; If it has checksums, clear them
+            movea.l A1,A0                           ; Otherwise, clear data as checksums
+.ClearDisk:
+            moveq   #0,D0                           ; Clear to zero, assume success
+            tst.l   D6                              ; See if test passed
+            beq.b   .FormatStart                    ; If passed, initialize RAM and checksums
+            moveq   #Fmt1Err,D0                     ; Indicate that format failed
+            bra.b   .exit                           ; All done
+.NextBlock:
+            moveq   #(512/4)-1,D1                   ; Inner loop counter
+.BlockLoop:
+            move.l  D0,(A1)+                        ; Clear a longword at a time
+            dbf     D1,.BlockLoop                   ; Clear the whole block
+            move.l  D0,(A0)+                        ; Clear the checksum too
+.FormatStart:
+            cmpa.l  A1,A4                           ; See if all blocks cleared
+            bhi.b   .NextBlock                      ; Loop through all of the blocks
+.exit:
+            move.l  D0,-(SP)
+            moveq   #DisableEDiskWrites,D0
+            bsr.w   HWDependent
+            move.l  (SP)+,D0
+            rts
+ctlVerify:
+            bne.b   .done
+            movem.l (CheckSumPtr,A3),A0-A1/A4
+            move.l  A0,D0
+            beq.b   .done
+            moveq   #noErr,D0
+.NextBlock:
+            cmpa.l  A1,A4
+            bls.b   .done
+            moveq   #(512/4)-1,D1
+.BlockLoop:
+            move.l  (A1)+,D3
+            add.l   D0,D0
+            addx.l  D3,D0
+            dbf     D1,.BlockLoop
+            sub.l   (A0)+,D0
+            beq.b   .NextBlock
+            moveq   #verErr,D0
+.done:
+            rts
+statFmtLst:
+            bne.b   .done
+            moveq   #paramErr,D0
+            tst.w   (A4)
+            ble.b   .done
+            move.w  #1,(A4)+
+            movea.l (A4),A4
+            move.l  (dQDrvSz,A3),D0
+            swap    D0
+            move.l  D0,(A4)+
+            move.l  #$40000000,(A4)
+            moveq   #0,D0
+.done:
+            rts
+statDrvSts:
+            move.l  D1,D0
+            bne.b   .done
+            movea.l A4,A1
+            clr.w   (A1)+
+            lea     (WriteProtected,A3),A0
+            moveq   #(DQE-WriteProtected)+dQDrvSz2+2,D0
+            _BlockMove
+.done:
+            rts
+statDrvSize:
+            move.l  (RamDiskSize,A2),(A4)
+            moveq   #0,D0
+            rts
+ctlDriveInfo:
+            move.l  D1,D0
+            bne.b   .done
+            move.l  (DriveInfo,A3),(A4)
+.done:
+            rts
+ctlDriveIcon:
+            movea.l (DriveIconPtr,A3),A0
+            bra.b   IconCommon
+ctlMediaIcon:
+            movea.l (MediaIconPtr,A3),A0
+            bra.b   IconCommon
+IconCommon:
+            move.l  D1,D0
+            bne.b   .done
+            moceq   #ControlErr,D0
+            move.l  A0,D1
+            beq.b   .done
+            lea     (IconBuffer,A2),A1
+            move.l  A1,(A4)
+            move.l  #IconAndMaskSize,D0
+            _BlockMove
+            lea     (WhereStringBuff,A2),A1
+            clr.b   (A1)
+            move.l  (WhereStringPtr,A3),D1
+            beq.b   .done
+            movea.l D1,A0
+            moveq   #1,D0
+            add.b   (A0),D0
+            cmpi.w  #WhereStringSize,D0
+            bls.b   .L1
+            moveq   #WhereStringSize,D0
+.L1:
+            _BlockMove
+.done:
+            rts
+; FindDQE
+;
+; Searches the drive queue for the Drive Queue Element associated
+; with this driver request.
+FindDQE:
+            movea.l (dCtlStorage,A1),A2
+            addq.b  #1,(Active,A2)
+            jsr     (A2)
+            lea     DrvQHdr+qHead,A3
+            move.w  ($16,A0),D2
+            bpl.b   .search
+            neg.w   D2
+.search:
+            move.l  (qLink,A3),D3
+            beq.b   .notFound
+            movea.l D3,A3
+            cmp.w   (DQDrive,A3),D2
+            bne.b   .search
+            move.w  (dCtlRefNum,A1),D2
+            cmp.w   (DQRefNum,A3),D2
+            bne.b   .search
+            moveq   #noErr,D1
+            tst.b   (DiskInPlace,A3)
+            ble.b   .offLine
+            moveq   #CheckEDiskInserted,D0
+            bsr.b   HWDependent
+            beq.b   .offLine
+            moveq   #0,D0
+.done:
+            lea     (csParam,A0),A4
+            rts
+.offLine:
+            moveq   #offLinErr,D0
+            bra.b   .done
+.notFound:
+            moveq   #NSDrvErr,D1
+            moveq   #NSDrvErr,D0
+            bra.b   .done
+; EDiskDone
+;
+; Completes request processing, by checking error result code,
+; and returns control to the device manager through IODone.
+;
+; Inputs:   A2  Pointer to EDiskVars
+;           D0  Result code
+EDiskDone:
+            subq.b  #1,(Active,A2)
+            movea.l (DCEpointer,A2),A1
+            btst.b  #NoQueueBit-8,(SP)+
+            bne.b   .immed
+            move.l  JIODone,-(SP)
+.immed:
+            ext.l   D0
+            beq.b   .done
+            move.w  D0,DskErr
+.done:
+            rts
+; HWDependent
+;
+; Tests or performs a hardware dependent function
+;
+; Inputs:   A3  Pointer to DriveQElement for specified drive
+;           D0  Function selector
+HWDependent:
+            move.l  (HWDepProcPtr,A3),-(SP)
+            rts
+; SLIMDiskHandler
+SLIMDiskHandler:
+            move.l  A0,-(SP)
+            movea.l (SLIMRegPtr,A3),A0
+            move.b  (.decode,PC,D0.w),D0
+            jmp     (.decode,PC,D0.w)
+.decode:
+            dc.b    .checkInserted-.decode
+            dc.b    .checkReadOnly-.decode
+            dc.b    .enableWrites-.decode
+            dc.b    .disableWrites-.decode
+            dc.b    .eject-.decode
+            dc.b    0
+.checkInserted:
+            move.w  #8,($20,A0)
+            moveq   #8,D0
+            and.w   (A0),D0
+            beq.b   .L3
+            tst.b   (-3,A3)
+            ble.b   .L2
+            move.w  #8,($10,A0)
+.L2:
+            moveq   #-1,D0
+.L3:
+            movea.l (SP)+,A0
+            rts
+.checkReadOnly:
+            move.w  (A0),D0
+            lsr.w   #3,D0
+            subx.l  D0,D0
+            bra.b   .L3
+.enableWrites:
+            clr.w   ($20,A0)
+            bra.b   .L3
+.disableWrites:
+            move.w  #8,($20,A0)
+            bra.b   .L3
+.eject:
+            move.b  #-$B,(-3,A3)
+            clr.w   ($10,A0)
+            bra.b   .L3
+; RAMDiskHandler
+RAMDiskHandler:
+            move.b  (.decode,PC,D0.w),D0
+            jmp     (.decode,PC,D0.w)
+.decode:
+            dc.b    .checkInserted-.decode
+            dc.b    .checkReadOnly-.decode
+            dc.b    .enableWrites-.decode
+            dc.b    .disableWrites-.decode
+            dc.b    .eject-.decode
+            align   2
+.checkInserted:
+            moveq   #-1,D0
+            rts
+.checkReadOnly:
+            moveq   #0,D0
+.enableWrites:
+.disableWrites
+            rts
+.eject:
+            clr.b   (DiskInPlace,A3)
+            rts
+; ROMDiskHandler
+ROMDiskHandler:
+            move.b  (.decode,PC,D0.w),D0            ; Get the routine offset
+            jmp     (.decode,PC,D0.w)               ; Jump to it
+.decode:
+            dc.b    .checkInserted-.decode
+            dc.b    .checkReadOnly-.decode
+            dc.b    .enableWrites-.decode
+            dc.b    .disableWrites-.decode
+            dc.b    .eject-.decode
+            align   2
+.checkInserted:
+.checkReadOnly
+            moveq   #-1,D0                          ; Always inserted, always read only
+.enableWrites:
+.disableWrites
+            rts
+.eject:
+            clr.b   (DiskInPlace,A3)                ; Mark it as offline
+            rts
+; EDiskPollTask
+;
+; Polls the SLIM cards to check for insertions and removals.
+; Debounces the result, and post events to reflect the action.
+;
+; Inputs:   A0  Address of VTask (passed by Vertical Retrace Manager)
+EDiskPollTask:
+            lea     (EDiskVars-VTask,A0),A2
+            lea     DrvQHdr+qHead,A3
+            movea.l (DCEpointer,A2),A1
+            move.w  (dCtlRefNum,A1),D3
+            tst.b   (Active,A2)
+            beq.b   .next
+            addq.w  #1,(VTask+vblCount,A2)
+            rts
+.search:
+            movea.l D2,A3                           ; A3 = DriveQElement
+            cmp.w   (dqRefNum,A3),D3                ; See if we are the driver
+            beq.b   .CheckDrive                     ; Check our drives
+.next:
+            move.l  (qLink,A3),D2                   ; Check next drive queue element
+            bne.b   .search                         ; Search until end of drive queue
+            move.w  #EDiskPollRate,(VTask+vblCount,A2)
+            rts
+.CheckDrive:
+            moveq   #CheckEDiskInserted,D0          ; Hardware dependent function code
+            bsr.w   HWDependent                     ; See if disk is inserted
+            addq.w  #1,D0                           ; CCR.x = 1 if EDisk inserted
+            move.b  (InsertedStatus,A3),D1          ; Prepare to shift in new inserted status
+            addx.b  D1,D1                           ; Shift in new inserted status
+            move.b  D1,(InsertedStatus,A3)          ; Update inserted status
+            moveq   #InsertedMask,D0                ; Prepare to de-bounce, and test inserted
+            and.b   D0,D1                           ; See if offline, without bounce
+            bne.b   .CheckOnLine                    ; If not offline, check online or bounce
+            tst.b   (DiskInPlace,A3)                ; Check online status
+            bpl.b   .next                           ; If not ejecting, do nothing
+            clr.b   (DiskInPlace,A3)                ; Now mark it offline (ejected)
+            bra.b   .next                           ; Eject complete, check next drive
+.CheckOnLine:
+            cmp.b   D0,D1
+            bne.b   .next
+            tst.b   (DiskInPlace,A3)
+            bpl.b   .L1
+            addq.b  #1,(DiskInPlace,A3)
+            bmi.b   .next
+.L1:
+            beq.b   .OnLine
+.mount:
+            btst.b  #MountedFlag,(Flags,A3)
+            bne.b   .next
+            moveq   #DiskInsertEvt,D0
+            movea.l D0,A0
+            move.w  (DQDrive,A3),D0
+            _PostEvent
+            bne.b   .next
+            bset.b  #MountedFlag,(Flags,A3)
+            bra.b   .next
+.OnLine:
+            move.b  (DiskInPlaceInit,A3),(DiskInPlace,A3)
+            clr.b   (WriteProtected,A3)
+            move.l  (HeaderInfoPtr,A3),D0
+            beq.b   .SetupRAMDisk
+            movea.l D0,A0
+            move.l  (HdrFormatTime,A0),(FormatTime,A3)
+            move.l  (HdrFormatTicks,A0),(FormatTicks,A3)
+            moveq   #CheckEDiskReadOnly,D0
+            bsr.w   HWDependent
+            move.b  D0,(WriteProtected,A3)
+            bne.b   SetupROMDisk
+            tst.l   (SLIMRegPtr,A3)
+            beq.b   SetupRAMDisk
+            moveq   #EnableEDiskWrites,D0
+            bsr.w   HWDependent
+            bsr.w   ComputeSLIMSize
+            add.l   A0,D0
+            move.l  D0,(DataEndPtr,A3)
+            adda.w  #EDiskHeaderSize,A0
+            move.l  A0,(CheckSumPtr,A3)
+            moveq   #DisableEDiskWrites,D0
+            bsr.w   HWDependent
+.SetupRAMDisk:
+            movem.l (CheckSumPtr,A3),D0-D2
+            tst.l   D0
+            beq.b   .BaseFound
+            move.l  D0,D1
+            moveq   #0,D0
+.BaseFound:
+            btst.b  #CreateWithXSums,(Flags,A3)
+            beq.b   .UpdateBasePtrs
+            move.l  D1,D0
+            sub.l   D2,D1
+            neg.l   D1
+            addi.l  #$FFFF,D1
+            lsr.l   #7,D1
+            andi.w  #$FE00,D1
+            add.l   D0,D1
+.UpdateBasePtrs:
+            movem.l D0-D1,(CheckSumPtr,A3)
+.SetupDriveSize:
+            sub.l   D1,D2
+            bcc.b   .DriveSizeOK
+            move.l  D1,(DataEndPtr,A3)
+            moveq   #0,D2
+.DriveSizeOK:
+            rol.l   #7,D2
+            move.l  D2,(dqDrvSz,A3)
+            bra.w   .mount
+.SetupROMDisk:
+            move.l  A0,D0
+            lea     HeaderTemplate,A1
+            lea     (HdrBlockSize,A0),A0
+            moveq   #3,D2
+.cmpLoop:
+            cmpm.l  (A0)+,(A1)+
+            dbne    D2,.cmpLoop
+            beq.b   .SigOK
+            move.l  D0,D1
+            move.l  D1,D2
+            bra.b   .UpdateBasePtrs
+.SigOK:
+            move.l  (A0)+,D0
+            addq.w  #8,A0
+            lea     (CheckSumPtr,A3),A1
+            moveq   #2,D2
+            tst.l   (SLIMRegPtr,A3)
+            bne.b   .offsetLoop
+            moveq   #5,D2
+            move.l  ($18,A0),D1
+            beq.b   .offsetLoop
+            move.l  D1,(DriveInfo,A3)
+.offsetLoop:
+            addq.l  #4,A1
+            move.l  (A0)+,D1
+            beq.b   .nextOffset
+            cmp.l   D0,D1
+            bh.b    .nextOffset
+            add.l   (HeaderInfoPtr,A3),D1
+            move.l  D1,(-4,A1)
+.nextOffset:
+            dbf     D2,.offsetLoop
+            movem.l (DataStartPtr,A3),D1-D2         ; Get the start/end pointers
+            bra.b   .SetupDriveSize                 ; Setup the drive queue size info
+; ComputeSLIMSize
+;
+; Returns the device size for the specified SLIM card.
+;
+; Inputs:   A0  Pointer to base of SLIM address space for this card
+; Outputs:  D0  Device size in bytes
+ComputeSLIMSize:
+            adda.l  #SegmentSize*4,A0               ; Point past end of last segment
+            movea.l A0,A1                           ; Save copy of end address
+            moveq   #0,D0                           ; Assume all 4 segments are missing
+            move.l  #'Gary',D1                      ; Rotating pattern
+            moveq   #4-1,D2                         ; Loop counter
+.FillLoop:
+            suba.l  #SegmentSize,A0                 ; Point to base of previous segment
+            move.l  (A0),-(SP)                      ; Save the old contents
+            rol.l   #8,D1                           ; Change the pattern
+            move.l  D1,(A0)                         ; Write to the RAM
+            cmp.l   (A0),D1                         ; See if we can read it back
+            bne.b   .NotRAM1                        ; If not, it's not RAM
+            not.l   D1
+            move.l  D1,(A0)
+            cmp.l   (A0),D1
+            bne.b   .NotRAM2
+            bset.l  D2,D0
+.NotRAM2:
+            not.l   D1
+.NotRAM1:
+            dbf     D2,.FillLoop
+            not.l   D1
+            moveq   #3,D2
+.CheckLoop:
+            suba.l  #SegmentSize,A1
+            rol.l   #8,D1
+            cmp.l   (A1),D1
+            beq.b   .IsRAM
+            bclr.l  D2,D0
+.IsRAM:
+            dbf     D2,.CheckLoop
+            moveq   #3,D2
+.RestoreLoop:
+            move.l  (SP)+,(A1)                      ; Restore the old contents
+            adda.l  #SegmentSize,A1                 ; Point to base of next segment
+            dbf     D2,.RestoreLoop                 ; Loop through all 4 segments
+            move.b  (.SizesTable,PC,D0.w),D0        ; Encode the segment present bits
+            moveq   #19,D1                          ; Shift amount
+            lsl.l   D1,D0                           ; Convert segment count to byte count
+            rts
+.SizesTable
+            dc.b    0
+            dc.b    1
+            dc.b    0
+            dc.b    2
+            dc.b    0
+            dc.b    0
+            dc.b    0
+            dc.b    3
+            dc.b    0
+            dc.b    0
+            dc.b    0
+            dc.b    0
+            dc.b    0
+            dc.b    0
+            dc.b    0
+            dc.b    4                               ; 1111 - RAM, 2.0MB, 4 segments
+CreateEDiskHeader:
+            move.l  (HeaderInfoPtr,A3),D0
+            beq.b   .done
+            movea.l D0,A0                           ; Setup header pointer
+            moveq   #EDiskHeaderSize/4-1,D3         ; Loop counter
+.clrLoop:
+            clr.l   (A0)+                           ; Clear the header block
+            dbf     D3,.clrLoop
+            lea     HeaderTemplate,A1               ; Point to default values
+            lea     (HdrBlockSize-EDiskHeaderSize,A0),A0
+            moveq   #3,D3
+.cpyLoop:
+            move.l  (A1)+,(A0)+                     ; Copy the template
+            dbf     D3,.cpyLoop
+            move.l  (DataEndPtr,A3),D2              ; Find end of device
+            sub.l   D0,D2                           ; D2 = device size
+            move.l  D2,(A0)+                        ; Setup HdrDeviceSize
+            lea     (FormatTime,A3),A1              ; Point to drive info
+            move.l  Time,(A1)                       ; Setup the format time
+            mvoe.l  (A1)+,(A0)+                     ; Setup HdrFormatTime
+            move.l  Ticks,(A1)                      ; Setup the format ticks
+            move.l  (A1)+,(A0)+                     ; Setup HdrFormatTicks
+            moveq   #5,D3
+.offsetLoop:
+            addq.l  #4,A0                           ; Leave offset zero, assume not supported
+            move.l  (A1)+,D1                        ; Get next pointer field
+            sub.l   D0,D1                           ; Make it an offset from base of device
+            cmp.l   D1,D2                           ; See if in range
+            bcs.b   .nextOffset                     ; If out of range, try next one
+            move.l  D1,(-4,A0)                      ; If in range, put it into the header
+.nextOffset:
+            dbf     D3,.offsetLoop
+.done:
+            rts
+HeaderTemplate:
+            dc.w    512
+            dc.w    1
+            dc.b    'EDisk Gary D'
+            align   2
+SlimDrive0Name:
+            dc.b    16,'Upper SLIM Drive'
+            align   2
+SlimDrive1Name:
+            dc.b    16,'Lower SLIM Drive'
+            align   2
+ROMDiskName:
+            dc.b    17,'Internal ROM Disk'
+            align   2
+RAMDiskName:
+            dc.b    17,'Internal RAM Disk'
+            align   2
+ROMDiskMediaIcon:
+RAMDiskMediaIcon:
+ROMDiskDriveIcon:
+RAMDiskDriveIcon:
+            dc.b    %01111111111111111111111111110000
+            dc.b    %10000001000000000000000100001000
+            dc.b    %10000001000000000111000100000100
+            dc.b    %10000001000000001000100100000010
+            dc.b    %10000001000000001000100100000001
+            dc.b    %10000001000000001000100100000001
+            dc.b    %10000001000000001000100100000001
+            dc.b    %10000001000000001011111111111101
+            dc.b    %10000001000000001100000000001101
+            dc.b    %10000001000000001000000000010101
+            dc.b    %10000000111111110000000000100101
+            dc.b    %10000000000000100000000001001001
+            dc.b    %10000000000001000000000010011001
+            dc.b    %10000000000010000000000100101001
+            dc.b    %10000000000100000000001001101001
+            dc.b    %10000000001000000000010010101001
+            dc.b    %10000000010000000000100110101001
+            dc.b    %10000000100000000001001010101001
+            dc.b    %10000001000000000010011010100001
+            dc.b    %10000010000000000100101010100001
+            dc.b    %10000100000000001001101010000001
+            dc.b    %10001111111111110010101010000001
+            dc.b    %10001000000000010110101000000001
+            dc.b    %10001000000000011010101000000001
+            dc.b    %10001111111111111010100000000001
+            dc.b    %10000101010000001010100000000001
+            dc.b    %10000101000000001010000000000001
+            dc.b    %10000101000000001010000000000001
+            dc.b    %10000100000000001000000000000001
+            dc.b    %10000100000000001000000000000001
+            dc.b    %10000000000000000000000000000001
+            dc.b    %11111111111111111111111111111110
+;
+            dc.b    %01111111111111111111111111110000
+            dc.b    %11111111111111111111111111111000
+            dc.b    %11111111111111111111111111111100
+            dc.b    %11111111111111111111111111111110
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111111
+            dc.b    %11111111111111111111111111111110
+SLIMDiskMediaIcon:
+            dc.b    %00000011111111111111111111000000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100001000000000000000100000
+            dc.b    %00000100011100000000000000100000
+            dc.b    %00000100011100000000000000100000
+            dc.b    %00000100111110000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000100000000000000000000100000
+            dc.b    %00000011111111111111111111100000
+SLIMDiskDriveIcon:
+            dc.b    %00000011111111111111111111000000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+            dc.b    %00000111111111111111111111100000
+UpperDriveIcon:
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000100000000
+            dc.b    %00000000000000000000001010000000
+            dc.b    %00000000000000000000010011000000
+            dc.b    %00000000000000000000100100100000
+            dc.b    %00000000000000000001001001000000
+            dc.b    %00000000000000000010010010000000
+            dc.b    %00000000000000000100100100000000
+            dc.b    %00000000000000001001001000000000
+            dc.b    %00000000000000010010010000000000
+            dc.b    %00000000000000100100100000000000
+            dc.b    %00000000000001001001000000000000
+            dc.b    %00000000000010010010000000000000
+            dc.b    %00000000000100100100000000000000
+            dc.b    %00000000000011001111111110000100
+            dc.b    %00000000000001111000000001001100
+            dc.b    %00000000000001001011111001011111
+            dc.b    %00000000000001001000000001001100
+            dc.b    %00011100111110110011111001000100
+            dc.b    %00100011000000010000000001000000
+            dc.b    %01111111111111111111111111000000
+            dc.b    %10000000000000000111111101000000
+            dc.b    %10000000000000000000000001000000
+            dc.b    %11111111111111111111111111000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+;
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000100000000
+            dc.b    %00000000000000000000001110000000
+            dc.b    %00000000000000000000011111000000
+            dc.b    %00000000000000000000111111100000
+            dc.b    %00000000000000000001111111000000
+            dc.b    %00000000000000000011111110000000
+            dc.b    %00000000000000000111111100000000
+            dc.b    %00000000000000001111111000000000
+            dc.b    %00000000000000011111110000000000
+            dc.b    %00000000000000111111100000000000
+            dc.b    %00000000000001111111000000000000
+            dc.b    %00000000000011111110000000000000
+            dc.b    %00000000000111111100000000000000
+            dc.b    %00000000000011111111111110000100
+            dc.b    %00000000000001111111111111001100
+            dc.b    %00000000000001111111111111011111
+            dc.b    %00000000000001111111111111001100
+            dc.b    %00011100111111111111111111000100
+            dc.b    %00111111111111111111111111000000
+            dc.b    %01111111111111111111111111000000
+            dc.b    %11111111111111111111111111000000
+            dc.b    %11111111111111111111111111000000
+            dc.b    %11111111111111111111111111000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+LowerDriveIcon:
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000100000000
+            dc.b    %00000000000000000000001010000000
+            dc.b    %00000000000000000000010011000000
+            dc.b    %00000000000000000000100100100000
+            dc.b    %00000000000000000001001001000000
+            dc.b    %00000000000000000010010010000000
+            dc.b    %00000000000000000100100100000000
+            dc.b    %00000000000000001001001000000000
+            dc.b    %00000000000000010010010000000000
+            dc.b    %00000000000000100100100000000000
+            dc.b    %00000000000001001001000000000000
+            dc.b    %00000000000010010010000000000000
+            dc.b    %00000000000100100100000000000000
+            dc.b    %00000000000011001111111110000000
+            dc.b    %00000000000001111000000001000000
+            dc.b    %00000000000001001011111001000100
+            dc.b    %00000000000001001000000001001100
+            dc.b    %00011100111110110011111001011111
+            dc.b    %00100011000000010000000001001100
+            dc.b    %01111111111111111111111111000100
+            dc.b    %10000000000000000111111101000000
+            dc.b    %10000000000000000000000001000000
+            dc.b    %11111111111111111111111111000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+;
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000100000000
+            dc.b    %00000000000000000000001110000000
+            dc.b    %00000000000000000000011111000000
+            dc.b    %00000000000000000000111111100000
+            dc.b    %00000000000000000001111111000000
+            dc.b    %00000000000000000011111110000000
+            dc.b    %00000000000000000111111100000000
+            dc.b    %00000000000000001111111000000000
+            dc.b    %00000000000000011111110000000000
+            dc.b    %00000000000000111111100000000000
+            dc.b    %00000000000001111111000000000000
+            dc.b    %00000000000011111110000000000000
+            dc.b    %00000000000111111100000000000000
+            dc.b    %00000000000011111111111110000000
+            dc.b    %00000000000001111111111111000000
+            dc.b    %00000000000001111111111111000100
+            dc.b    %00000000000001111111111111001100
+            dc.b    %00011100111111111111111111011111
+            dc.b    %00111111111111111111111111001100
+            dc.b    %01111111111111111111111111000100
+            dc.b    %11111111111111111111111111000000
+            dc.b    %11111111111111111111111111000000
+            dc.b    %11111111111111111111111111000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+            dc.b    %00000000000000000000000000000000
+;
+            dc.l    $C000
+            dc.l    $CCC0000
+            dc.w    $74
+DATA_0092A944:
+            dc.l    $44000000
+            dc.l    0
+            dc.w    $1A
+FUND_0092A94E:
+            andi.w  #$AC,D0
+            andi.w  #$14E,D0
+            subi.b  #$54,($5020,A6)
+            move.w  D0,D2
+            move.l  ABusVars,D1
+            bgt.b   .L1
+            cmpi.l  #-1,D1
+            bne.b   .L1
+            moveq   #-$17,D0
+            bra.b   .exit
+.L1:
+            movea.l D1,A3
+            moveq   #0,D0
+            tst.l   ($1E,A3)
+            bne.b   .exit
+            move.w  #$4D0,D0
+            _NewPtrSysClear
+            bne.b   .exit
+            bset.b  #4,PortBUse
+            move.l  A0,($1E,A3)
+            clr.b   ($1E,A3)
+            move.b  #$34,(7,A1)
+            move.w  #$C20,(A0)
+            move.w  #$1005,($2,A0)
+            lea     (OurDCE,A0),A2
+            move.l  A1,(A2)+
+            move.w  $16C,(A2)+
+            moveq   #5,D0
+            movea.l ROMBase,A3
+            cmpi.b  #$76,(9,A3)
+            blt.b   .L2
+            move.w  TimeDBRA,D0
+            divu.w  #100,D0
+.L2:
+            move.b  D0,($4CD,A0)
+            mulu.w  #120,D0
+            subi.w  #142,D0
+            divu.w  #48,D0
+            move.w  D0,($4CE,A0)
+            move.l  Time,($2C0,A0)
+            movea.l A2,A0
+            addq.w  #4,A2
+            move.w  #1,(A2)+
+            lea     FUN_0092AFA2,A1
+            move.l  A1,(A2)+
+            move.w  #6,(A2)+
+            _VInstall
+.exit:
+            rts
+FUN_0092A9F0:
+            movea.l ROMBase,A2
+            cmpi.b  #$76,(9,A3)
+            blt.b   .L1
+            movea.l $D1C,A2
+            move.l  A2,D3
+            addq.l  #1,D3
+            beq.b   .L1
+            movea.l (A2),A2
+            move.l  ($8,A2),D3
+            beq.b   .L1
+            movea.l D3,A2
+            jsr     (A2)
+.L1:
+            tst.l   ABusVars
 
 
 
