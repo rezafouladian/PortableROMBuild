@@ -6764,7 +6764,7 @@ FindDQE:
             addq.b  #1,(Active,A2)
             jsr     (A2)
             lea     DrvQHdr+qHead,A3
-            move.w  ($16,A0),D2
+            move.w  (ioDrvNum,A0),D2
             bpl.b   .search
             neg.w   D2
 .search:
