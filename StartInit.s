@@ -4100,7 +4100,7 @@ IsItFlopOrDef:
 .Exit:
             rts
 IsItFloppy:
-            cmpi.w  #FloppyRefNum,(dqRefNum,A2)
+            cmpi.w  #FloppyRefNum,(dQRefNum,A2)
             rts
 IsItAnything:
             cmp.w   D0,D0
@@ -6194,9 +6194,9 @@ EDiskOpen:
             beq.b   .FoundDriveNumber               ; If drive queue is empty
 .NextDriveQueue:
             movea.l D0,A0
-            cmp.w   (DQDrive,A0),D7
+            cmp.w   (dQDrive,A0),D7
             bcc.b   .NextDriveNumber
-            move.w  (DQDrive,A0),D7
+            move.w  (dQDrive,A0),D7
 .NextDriveNumber:
             move.l  (qLink,A0),D0                   ; Check next drive queue element
             bne.b   .NextDriveQueue
@@ -6771,10 +6771,10 @@ FindDQE:
             move.l  (qLink,A3),D3
             beq.b   .notFound
             movea.l D3,A3
-            cmp.w   (DQDrive,A3),D2
+            cmp.w   (dQDrive,A3),D2
             bne.b   .search
             move.w  (dCtlRefNum,A1),D2
-            cmp.w   (DQRefNum,A3),D2
+            cmp.w   (dQRefNum,A3),D2
             bne.b   .search
             moveq   #noErr,D1
             tst.b   (DiskInPlace,A3)
@@ -6815,6 +6815,7 @@ EDiskDone:
 ; HWDependent
 ;
 ; Tests or performs a hardware dependent function
+; (e.g. SLIMDiskHandler, RAMDiskHandler, etc.)
 ;
 ; Inputs:   A3  Pointer to DriveQElement for specified drive
 ;           D0  Function selector
@@ -6835,32 +6836,32 @@ SLIMDiskHandler:
             dc.b    .eject-.decode
             dc.b    0
 .checkInserted:
-            move.w  #8,($20,A0)
-            moveq   #8,D0
-            and.w   (A0),D0
+            move.w  #1<<slimNoWrites,(slimProtectReg,A0)
+            moveq   #1<<slimInserted,D0
+            and.w   (slimStatusReg,A0),D0
             beq.b   .L3
-            tst.b   (-3,A3)
+            tst.b   (DiskInPlace,A3)
             ble.b   .L2
-            move.w  #8,($10,A0)
+            move.w  #1<<slimNotEjecting,(slimEjectReg,A0)
 .L2:
-            moveq   #-1,D0
+            moveq   #-1,D0                          ; Return inserted
 .L3:
             movea.l (SP)+,A0
             rts
 .checkReadOnly:
-            move.w  (A0),D0
+            move.w  (slimStatusReg,A0),D0
             lsr.w   #3,D0
             subx.l  D0,D0
             bra.b   .L3
 .enableWrites:
-            clr.w   ($20,A0)
+            clr.w   (slimProtectReg,A0)
             bra.b   .L3
 .disableWrites:
-            move.w  #8,($20,A0)
+            move.w  #1<<slimNoWrites,(slimProtectReg,A0)
             bra.b   .L3
 .eject:
-            move.b  #-$B,(-3,A3)
-            clr.w   ($10,A0)
+            move.b  #-$B,(DiskInPlace,A3)
+            clr.w   (slimEjectReg,A0)
             bra.b   .L3
 ; RAMDiskHandler
 RAMDiskHandler:
@@ -6921,7 +6922,7 @@ EDiskPollTask:
             rts
 .search:
             movea.l D2,A3                           ; A3 = DriveQElement
-            cmp.w   (dqRefNum,A3),D3                ; See if we are the driver
+            cmp.w   (dQRefNum,A3),D3                ; See if we are the driver
             beq.b   .CheckDrive                     ; Check our drives
 .next:
             move.l  (qLink,A3),D2                   ; Check next drive queue element
@@ -6956,7 +6957,7 @@ EDiskPollTask:
             bne.b   .next
             moveq   #DiskInsertEvt,D0
             movea.l D0,A0
-            move.w  (DQDrive,A3),D0
+            move.w  (dQDrive,A3),D0
             _PostEvent
             bne.b   .next
             bset.b  #MountedFlag,(Flags,A3)
@@ -7009,7 +7010,7 @@ EDiskPollTask:
             moveq   #0,D2
 .DriveSizeOK:
             rol.l   #7,D2
-            move.l  D2,(dqDrvSz,A3)
+            move.l  D2,(dQDrvSz,A3)
             bra.w   .mount
 .SetupROMDisk:
             move.l  A0,D0
