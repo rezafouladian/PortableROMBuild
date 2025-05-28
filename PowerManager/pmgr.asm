@@ -1,6 +1,8 @@
 CommandByte         =   $11
 ByteCount           =   $12
 
+WriteLocation       =   $1B
+
 ref5V_Level         =   $1F
 lowBatteryLevel     =   $71
 deadBatteryLevel    =   $72
@@ -23,6 +25,8 @@ AD_Ctrl_Reg         =   $F3
 AD_Conv             =   3
 
 Int_Ctrl_Reg        =   $FE
+Int2_Enb            =   0
+Int2_Req            =   1
 AD_Int_Req          =   5           ; AD interrupt request bit
                                     ; Shared with Timer 1 interrupt bit
                                     ; When bit 3 of A/D control register = 1,
@@ -30,6 +34,15 @@ AD_Int_Req          =   5           ; AD interrupt request bit
 Int1_Req            =   7           ; Interrupt 1 request bit
 
 PWM_Ctrl_Reg        =   $F5
+
+IWM_CNTRL           =   0
+SCC_CNTRL           =   1
+HD_PWR              =   2
+MODEM_PWR           =   3
+SERIAL_PWR          =   4
+SOUND_PWR           =   5
+MINUS_5V            =   6
+SYS_PWR             =   7
 
 Port_P1             =   $E2
 Port_P1_DIR         =   $E3
@@ -155,12 +168,12 @@ LAB_E8E1:
     lda $2E
     sta $13
     jsr SetContrast
-    seb 0,PWM_Ctrl_Reg
+    seb 0,PWM_Ctrl_Reg              ; Turn PWM on
     jsr batteryNow
     seb KBD_RST,Port_P1
     cpy #0
     beq LAB_E8F9
-    bbc VIA_TEST,Port_P3
+    bbc VIA_TEST,Port_P3,LAB_E8F9
     jmp Sleep
 LAB_E8F9
     ldx #2
@@ -313,84 +326,84 @@ ReturnDataToHost
     ldm #$00,$1C
 ReturnDataToHost2
     lda $11
-    jsr FUN_EA38
-    bcs .exit
+    jsr SendByte
+    bcs ReturnDataExit
     lda $12
-    jsr FUN_EA38
-    bcs .exit
+    jsr SendByte
+    bcs ReturnDataExit
     tst $12
-    bcs .exit
+    bcs ReturnDataExit
     ldy #0
-.Loop
+ReturnDataLoop
     lda ($1B),Y
-    jsr FUN_EA38
-    bcs .exit
+    jsr SendByte
+    bcs ReturnDataExit
     iny
-    dec $12
-    bne .Loop
+    dec ByteCount
+    bne ReturnDataLoop
     clc
-.exit
+ReturnDataExit
     rts
-FUN_EA38
+SendByte
     bbc PMREQ,Port_P3,.Fail
-    ldm #%11111111,VIA_Com_DIR
-    sta VIA_Com
+    ldm #%11111111,VIA_Com_DIR      ; Set direction to output
+    sta VIA_Com                     ; Send byte to VIA
     clb PMACK,Port_P3
-    bbc PMREQ,Port_P3,.Done
-    ldx #0
+    bbc PMREQ,Port_P3,.Done         ; Check for transfer acknowledge
+    ldx #0                          ; Initialize loop counter
 .Loop
-    bbc PMREQ,Port_P3,.Done
-    dex
-    bbc PMREQ,Port_P3,.Done
-    bne .Loop
+    bbc PMREQ,Port_P3,.Done         ; Check for transfer acknowledge
+    dex                             ; Decrement loop counter
+    bbc PMREQ,Port_P3,.Done         ; Check for transfer acknowledge
+    bne .Loop                       ; Loop until timeout
 .Fail
     seb PMACK,Port_P3
-    ldm #0,VIA_Com_DIR
-    sec
+    ldm #0,VIA_Com_DIR              ; Set direction back to input
+    sec                             ; Return failure
     rts
 .Done
     seb PMACK,Port_P3
-    ldm #0,VIA_Com_DIR
-    clc
+    ldm #0,VIA_Com_DIR              ; Set direction back to input
+    clc                             ; Return success
     rts
 FUN_EA5E
-    jsr FUN_EB39
+    jsr ReadBattery
     lda HICHGLevel
     cmp #732-512
-    bcc LAB_EA69
+    bcc .LAB_EA69
     lda #732-512
-LAB_EA69
+.LAB_EA69
     cmp ref5V_Level
-    bcs LAB_EA6D
-LAB_EA6D
+    bcs .LAB_EA6D
+.LAB_EA6D
     lda $1D
     asl A
     asl A
     asl A
     eor Port_P1
-    bbs 3,A,LAB_EA7D
+    bbs 3,A,.LAB_EA7D
     seb 1,$1
     seb 5,$1D
     jsr batteryNow
-LAB_EA7D
+.LAB_EA7D
     clb 0,$1D
     clb 3,$1D
     clb 6,$1D
-    bbc CHRG_ON,Port_P1,HICHG_OnCheck
+    bbc CHRG_ON,Port_P1,.HICHG_OnCheck
     lda lowBatteryLevel
     cmp #602-512
-    bcs LAB_EAD9
+    bcs .LAB_EAD9
     cmp #571-512
-    bcc LAB_EAD9
+    bcc .LAB_EAD9
     lda deadBatteryLevel
     cmp #602-512
-    bcs LAB_EAD9
+    bcs .LAB_EAD9
     cmp #571-512
-    bcc LAB_EAD9
+    bcc .LAB_EAD9
     lda lowBatteryLevel
     cmp deadBatteryLevel
-    bcc LAB_EAD9
-LAB_EAA0
+    bcc .LAB_EAD9
+.LAB_EAA0
     lda lowBatteryLevel
     lsr A
     sta $20
@@ -400,38 +413,38 @@ LAB_EAA0
     adc $20
     sta $20
     lda BatteryLevel
-    bcc LAB_EABC
-    bbc 4,$1D,LAB_EAD5
+    bcc .LAB_EABC
+    bbc 4,$1D,.LAB_EAD5
     clb 4,$1D
     seb 1,$1
-    bra LAB_EAD5
-LAB_EABC
+    bra .LAB_EAD5
+.LAB_EABC
     seb 4,$1D
     seb 1,$1
     cmp $20
-    bcs LAB_EAD5
+    bcs .LAB_EAD5
     seb 6,$1D
     cmp deadBatteryLevel
-    bcs LAB_EAD5
+    bcs .LAB_EAD5
     seb 3,$1D
-    bbs 6,$0,LAB_EAD5
-    bbc VIA_TEST,Port_P3,LAB_EAD5
+    bbs 6,$0,.LAB_EAD5
+    bbc VIA_TEST,Port_P3,.LAB_EAD5
     jmp Sleep
-LAB_EAD5
+.LAB_EAD5
     ldm #0,$21
     rts
-LAB_EAD9
+.LAB_EAD9
     ldm #590-512,lowBatteryLevel
     ldm #574-512,deadBatteryLevel
     ldm #712-512,HICHGLevel
     jsr FUN_EF84
     sta $AF
-    bra LAB_EAA0
-HICHG_OnCheck
+    bra .LAB_EAA0
+.HICHG_OnCheck
     seb 0,$1D
     clb 4,$1D
     lda $21
-    bne LAB_EB03
+    bne .LAB_EB03
     seb HICHG,Port_P1
     seb 5,$14
     seb 1,$1D
@@ -440,41 +453,41 @@ HICHG_OnCheck
     ldm #1,$23
     clb 2,$1D
     rts
-LAB_EB03
+.LAB_EB03
     cmp #2
-    bcs HICHG_OffCheck
+    bcs .HICHG_OffCheck
     lda BatteryLevel
     cmp #720-512
-    bcs LAB_EB1B
-    bbs 2,$1D,LAB_EB32
+    bcs .LAB_EB1B
+    bbs 2,$1D,.LAB_EB32
     inc $22
-    bne LAB_EB32
+    bne .LAB_EB32
     inc $23
-    bne LAB_EB32
+    bne .LAB_EB32
     seb 2,$1D
     rts
-LAB_EB1B
+.LAB_EB1B
     ldm #2,$21
     rts
-HICHG_OffCheck
-    bne LAB_EB32
+.HICHG_OffCheck
+    bne .LAB_EB32
     dec $22
-    bne LAB_EB32
+    bne .LAB_EB32
     dec $23
-    bne LAB_EB32
+    bne .LAB_EB32
     ldm #3,$21
     clb HICHG,Port_P1
     clb 5,$14
     clb 1,$1D
-LAB_EB32
+.LAB_EB32
     lda BatteryLevel
     cmp #602-512
-    bcc LAB_EAD5
+    bcc .LAB_EAD5
     rts
-FUN_EB39
-    clb 3,AD_Ctrl_Reg
+ReadBattery
+    clb AD_Conv,AD_Ctrl_Reg
     ldm #AD_Batt,AD_Ctrl_Reg
-    seb 3,AD_Ctrl_Reg
+    seb AD_Conv,AD_Ctrl_Reg
     clb AD_Int_Req,Int_Ctrl_Reg
     ldm #0,AD_Start_Addr
 .WaitLoop1
@@ -527,7 +540,7 @@ batteryNow
 FUN_EB97
     clb Int1_Req,Int_Ctrl_Reg
     clb 5,$0
-    bbs $6,$0,.Skip
+    bbs 6,$0,.Skip
     bbs VIA_TEST,Port_P3,.Skip
     ldm #%01001000,Port_P0
     seb NC,Port_P1
@@ -904,9 +917,9 @@ Power_Command
     pla
     sta ByteCount
     ldx #0
-.LAB_EE46
+.ControlLoop
     lda $13,X
-    bpl .LAB_EE61
+    bpl .TurnOn                     ; Turning devices on?
     eor #$FF
     and Port_P0
     sta $2
@@ -914,14 +927,14 @@ Power_Command
     and #%01000000
     ora $2
     sta Port_P0
-    bra .LAB_EE5A
-.LAB_EE5A
-    inx
-    dec ByteCount
-    bne .LAB_EE46
+    bra .Next
+.Next
+    inx                             ; Increment memory counter
+    dec ByteCount                   ; Decrement loop counter
+    bne .ControlLoop                ; Loop if unfinished
     clc
     rts
-.LAB_EE61
+.TurnOn
     and #$7F
     ora Port_P0
     sta $2
@@ -930,16 +943,16 @@ Power_Command
     eor #%01111111
     and $2
     sta Port_P0
-    bra .LAB_EE5A
+    bra .Next
 .powerRead
     ldm #1,ByteCount
     lda Port_P0
     and #%01111111
     eor #%00111111
-    seb 5,A
-    bbs 2,In_Reg,$EE81
-    clb 5,A
-.LAB_EE81
+    seb SOUND_PWR,A
+    bbs SOUND_LATCH,In_Reg,.ReturnData
+    clb SOUND_PWR,A
+.ReturnData
     sta $13
     jsr ReturnDataToHost
     rts
@@ -1049,16 +1062,16 @@ Time_PRAM_Command
     ldm #16,ByteCount
     ldy #0
     lda CommandByte
-    jsr FUN_EA38
+    jsr SendByte
     bcs .exit
     lda #$14
-    jsr FUN_EA38
+    jsr SendByte
     bcs .exit
-    jsr LAB_EA2A
+    jsr ReturnDataLoop
     ldm #$37,$1B
     ldm #4,ByteCount
     ldy #0
-    jsr LAB_EA2A
+    jsr ReturnDataLoop
 .exit
     rts
 .xPramRead
@@ -1114,6 +1127,7 @@ CombineTime
     adc timeB
     adc timeA
     rts
+; Contrast_Command
 Contrast_Command
     bbc readBit,CommandByte,.SetContrastReceive
 .GetContrast
@@ -1126,6 +1140,7 @@ Contrast_Command
     ldm #1,ByteCount
     jsr WriteToLocation
     ;bra SetContrast
+; SetContrast
 SetContrast
     lda $13
     and #%00011111
@@ -1172,6 +1187,7 @@ SetContrast
 .byte   60
 .byte   62
 .byte   64
+; Modem_Command
 Modem_Command
     bbs readBit,CommandByte,.modemRead
     ldm #1,ByteCount
@@ -1217,6 +1233,9 @@ Modem_Command
     ldm #1,ByteCount
     jsr ReturnDataToHost
     rts
+; Battery_Command
+;
+; Read power status and battery voltage
 Battery_Command
     lda CommandByte
     cmp cmd_batteryRead
@@ -1269,6 +1288,7 @@ Sleep_Command
 .fail
     sec
     rts
+; Sleep
 Sleep
     clb DISP_BLANK,Port_P4          ; Turn off the display
     sei                             ; Disable interrupts
@@ -1293,7 +1313,7 @@ Sleep
     lda Port_P1
     sta $14
     clb SOUND_OFF,Port_P3
-    clb 0,PWM_Ctrl_Reg
+    clb 0,PWM_Ctrl_Reg              ; Turn PWM off
     clb SYS_RST,Port_P3
     clb 2,$0
     seb 6,$0
@@ -1319,7 +1339,7 @@ Sleep
     clb 5,$0
     clb 4,$0
 .LAB_F10F
-    sei
+    sei                             ; Disable interrupts
     clb 6,$0
     lda $6
     and #4
@@ -1334,10 +1354,10 @@ Sleep
     jsr FUN_EB97
 .LAB_F127
     bbs AKD,Port_P1,.LAB_F120
-    clb SYS_PWR,Port_P0
-    clb KBD_RST,Port_P1
-    seb 0,PWM_Ctrl_Reg
-    seb DISP_BLANK,Port_P4
+    clb SYS_PWR,Port_P0             ; Enable system power
+    clb KBD_RST,Port_P1             ; Hold keyboard controller in reset
+    seb 0,PWM_Ctrl_Reg              ; Turn PWM on
+    seb DISP_BLANK,Port_P4          ; Turn on the display
     ldx #2
 .LAB_F134
     bit Int_Ctrl_Reg
@@ -1345,12 +1365,13 @@ Sleep
     jsr FUN_EB97
     dex
     bne LAB_F134
-    seb KBD_RST,Port_P1
-    seb SYS_RST,Port_P3
-    clb 1,Int_Ctrl_Reg
-    seb 0,Int_Ctrl_Reg
-    cli
+    seb KBD_RST,Port_P1             ; Bring keyboard controller out of reset
+    seb SYS_RST,Port_P3             ; Bring system out of reset
+    clb Int2_Req,Int_Ctrl_Reg
+    seb Int2_Enb,Int_Ctrl_Reg
+    cli                             ; Enable interrupts
     jmp CommandReceive
+; Timer_Command
 Timer_Command
     lda CommandByte
     cmp cmd_timerSet
@@ -1358,8 +1379,8 @@ Timer_Command
 .timerSet
     bbs readBit,CommandByte,.timerRead  ; Useless check
     ldm #4, ByteCount
-    ldm #wakeupTimeA,$1B
-    ldm #0,$1C
+    ldm #wakeupTimeA,WriteLocation
+    ldm #0,WriteLocation+1
     jsr WriteBytesRAM
     seb 4,$0
     rts
@@ -1384,6 +1405,7 @@ Timer_Command
 .LAB_F184
     jsr ReturnDataToHost
     rts
+; Sound_Command
 Sound_Command
     bbs readBit,CommandByte,.soundRead
     ldm #1,ByteCount
@@ -1410,6 +1432,7 @@ Sound_Command
     ldm #1,ByteCount
     jsr ReturnDataToHost
     rts
+; PMGR_Command
 PMGR_Command
     lda CommandByte
     cmp cmd_PmgrSoftReset
