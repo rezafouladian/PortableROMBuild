@@ -10,8 +10,15 @@ cmd_readINT         =   $78
 
 readBit             =   3           ; Commands $x8-$xF are read commands
 
+;A/D and Input register
+AD_Reg              =   $EF 
 AD_Ref              =   0           ; +5V via 100k/100k voltage divider
 AD_Batt             =   1           ; Battery voltage from A/D line
+In_Reg              =   $EE
+SOUND_LATCH         =   2
+OFF_HOOK            =   3
+
+; A/D control register
 AD_Conv             =   3
 
 AD_Int_Req          =   5           ; AD interrupt request bit
@@ -68,7 +75,7 @@ InitRAM
     sta $2F,X
     inx
     bpl InitRAM
-    sta $1D
+    sta PowerFlags
     sta $21
     ldm #590-512,lowBatteryLevel
     ldm #574-512,deadBatteryLevel
@@ -129,7 +136,7 @@ LAB_E8E1:
     cpy #0
     beq LAB_E8F9
     bbc VIA_TEST,Port_P3
-    jmp LAB_F0B3
+    jmp Sleep
 LAB_E8F9
     ldx #2
 LAB_E8FB
@@ -384,7 +391,7 @@ LAB_EABC
     seb 3,$1D
     bbs 6,$0,LAB_EAD5
     bbc VIA_TEST,Port_P3,LAB_EAD5
-    jmp LAB_F0B3
+    jmp Sleep
 LAB_EAD5
     ldm #0,$21
     rts
@@ -1189,4 +1196,459 @@ Battery_Command
     lda CommandByte
     cmp cmd_batteryRead
     beq .batteryRead
+    cmp cmd_batteryNow
+    bne .exit
+    jsr batteryNow
+.batteryRead
+    ldm #PowerFlags,$1B
+    ldm #0,$1C
+    ldm #3,ByteCount
+    jsr ReturnDataToHost2
+    bcs .exit
+    bbs 1,$0,.exit
+    clb 2,$1
+    clb 1,$1
+    clb 5,PowerFlags
+.exit
+    rts
+readINT
+    lda $1
+    sta $13
+    ldm #1,ByteCount
+    jsr ReturnDataToHost
+    clb 3,$1
+    clb 1,$0
+    rts
+Sleep_Command
+    lda CommandByte
+    cmp cmd_sleepReq
+    bne .fail
+    ldm #4,ByteCount
+    jsr WriteToLocation
+    ldm #$70,CommandByte
+    ldx #4
+.CompareLoop
+    dex
+    bmi .LAB_F0A3
+    lda string_Matt,X
+    cmp $13,X
+    beq .CompareLoop
+    ldm #$AA,CommandByte
+.LAB_F0A3
+    ldm #0,ByteCount
+    jsr ReturnDataToHost2
+    bcs .fail
+    lda CommandByte
+    cmp #$70
+    beq Sleep
+.fail
+    sec
+    rts
+Sleep
+    clb DISP_BLANK,Port_P4          ; Turn off the display
+    sei                             ; Disable interrupts
+    bit Int_Ctrl_Reg
+    bpl Sleep
+    jsr FUN_EB97
+    ldx #$BF
+    txs
+.LAB_F0C0
+    bit Int_Ctrl_Reg
+    bpl .LAB_F0C0
+    jsr FUN_EB97
+.LAB_F0C7
+    bit Int_Ctrl_Reg
+    bpl .LAB_F0C7
+    jsr FUN_EB97
+    seb SOUND_PWR,Port_P0
+    clb SOUND_PWR,Port_P0
+    lda Port_P0
+    seb SYS_PWR,A
+    sta $13
+    lda Port_P1
+    sta $14
+    clb SOUND_OFF,Port_P3
+    clb 0,PWM_Ctrl_Reg
+    clb SYS_RST,Port_P3
+    clb 2,$0
+    seb 6,$0
+    ldm #%10011111,Port_P0
+    bra .LAB_F0F2
+.LAB_F0EA
+    jsr FUN_EB97
+    bbs AKD,Port_P1,.LAB_F0F2
+    seb 2,$0
+.LAB_F0F2
+    clb STOP_CLK,Port_P1
+    seb STOP_CLK,Port_P1
+    bbs 6,PowerFlags,.LAB_F0EA
+    bbc 2,$0,.LAB_F0FF
+    bbs AKD,Port_P1,.LAB_F10F
+.LAB_F0FF
+    bbs 5,$0,.LAB_F108
+    bbc 7,$0,.LAB_F0EA
+    bbs RING_DETECT,Port_P1,.LAB_F0EA
+.LAB_F108
+    sei
+    clb Int1_Req,Int_Ctrl_Reg
+    clb 5,$0
+    clb 4,$0
+.LAB_F10F
+    sei
+    clb 6,$0
+    lda $6
+    and #4
+    sta $6
+    lda $13
+    sta Port_P0
+    lda $14
+    sta Port_P1
+.LAB_F120
+    bit Int_Ctrl_Reg
+    bpl .LAB_F127
+    jsr FUN_EB97
+.LAB_F127
+    bbs AKD,Port_P1,.LAB_F120
+    clb SYS_PWR,Port_P0
+    clb KBD_RST,Port_P1
+    seb 0,PWM_Ctrl_Reg
+    seb DISP_BLANK,Port_P4
+    ldx #2
+.LAB_F134
+    bit Int_Ctrl_Reg
+    bpl .LAB_F134
+    jsr FUN_EB97
+    dex
+    bne LAB_F134
+    seb KBD_RST,Port_P1
+    seb SYS_RST,Port_P3
+    clb 1,Int_Ctrl_Reg
+    seb 0,Int_Ctrl_Reg
+    cli
+    jmp CommandReceive
+Timer_Command
+    lda CommandByte
+    cmp cmd_timerSet
+    bne .disableWakeUp
+.timerSet
+    bbs readBit,CommandByte,.timerRead  ; Useless check
+    ldm #4, ByteCount
+    ldm #wakeupTimeA,$1B
+    ldm #0,$1C
+    jsr WriteBytesRAM
+    seb 4,$0
+    rts
+.disableWakeUp
+    cmp cmd_disableWakeUp
+    bne .timerRead
+    clb 4,$0
+    rts
+.timerRead
+    ldm #5,ByteCount
+    lda wakeupTimeA
+    sta $13
+    lda wakeupTimeB
+    sta $14
+    lda wakeupTimeC
+    sta $15
+    lda wakeupTimeD
+    sta $16
+    ldm #0,$17
+    bbc 4,$0,.LAB_F184
+    seb 0,$17
+.LAB_F184
+    jsr ReturnDataToHost
+    rts
+Sound_Command
+    bbs readBit,CommandByte,.soundRead
+    ldm #1,ByteCount
+    jsr WriteToLocation
+    bbc 0,$13,.TurnSoundOn
+    seb SOUND_OFF,Port_P3
+    bra .SoundLatch
+.TurnSoundOn
+    clb SOUND_FF,Port_P3
+.SoundLatch
+    bbc 1,$13,.exit
+    seb SOUND_PWR,Port_P0
+    clb SOUND_PWR,Port_P0
+.exit
+    rts
+.soundRead
+    ldm #0,$13
+    bbc SOUND_OFF,Port_P3,.LAB_F1AA
+    seb 0,$13
+.LAB_F1AA
+    bbs SOUND_LATCH,In_Reg,.LAB_F1AF
+    seb 1,$13
+.LAB_F1AF
+    ldm #1,ByteCount
+    jsr ReturnDataToHost
+    rts
+PMGR_Command
+    lda CommandByte
+    cmp cmd_PmgrSoftReset
+    bne .PmgrSelfTest
+.PmgrSoftReset
+    jsr ReturnDataToHost2
+    bcs .fail
+    jmp InitPorts
+.PmgrSelfTest
+    cmp cmd_PmgrSelfTest
+    bne .readPmgrVers
+    ldm #0,$13
+    jsr SelfTest1
+    ror $13
+    jsr SelfTest2
+    ror $13
+    jsr SelfTest3
+    ror $13
+    ror $13
+    ror $13
+    ror $13
+    ror $13
+    ror $13
+    ldm #1,ByteCount
+    jsr ReturnDataToHost
+    rts
+.readPmgrVers
+    cmp cmd_readPmgrVers
+    bne .LAB_F200
+    lda PMVers1
+    sta $13
+    lda PMVers2
+    sta $14
+    ldm #2,ByteCount
+    jsr ReturnDataToHost
+    rts
+.LAB_F200
+    lda ByteCount
+    sta $2
+    jsr WriteToLocation
+    lda $13
+    sta $1C
+    lda $14
+    sta $1B
+    ldx $2
+    beq .fail
+    dex
+    beq .fail
+    dex
+    beq .LAB_F22A
+    lda CommandByte
+    cmp cmd_writePmgrRAM
+    bne .LAB_F22E
+    ldy #0
+.writeLoop
+    lda $15,Y
+    sta ($1B),Y
+    iny
+    dex
+    bne .writeLoop
+.LAB_F22A
+    clc
+    rts
+.fail
+    sec
+    rts
+.LAB_F22E
+    ldx $15
+    beq .LAB_F238
+    stx $12
+.LAB_F234
+    jsr ReturnDataToHost2
+    rts
+.LAB_F238
+    ldm #0,ByteCount
+    bra .LAB_F234
+SelfTest1
+    lda #$E8
+    sta $1C
+    ldy #6
+    lda #0
+    sta $14
+    sta $1B
+.LAB_F249
+    clc
+    adc ($1B),Y
+    bcc .LAB_F250
+    inc $14
+.LAB_F250
+    cmp #$80
+    rol $14
+    rol A
+    iny
+    bne .LAB_F249
+    bit Int_Ctrl_Reg
+    bpl .LAB_F265
+    sta $15
+    jsr FUN_EB97
+    lda $15
+    ldy #0
+.LAB_F265
+    inc $1C
+    bne .LAB_249
+    ldx $14
+    tay
+    ora $14
+    bne .check
+    dex
+    dey
+.check
+    cpx SelfTestVal1
+    bne .fail
+    cpy SelfTestVal1+1
+    bne .fail
+    clc
+    rts
+.fail
+    sec
+    rts
+SelfTest2
+    php
+    sei
+    sec
+    ldy #8
+.LAB_F285
+    ldx TestTableA,Y
+    lda 0,X
+    sta $14,Y
+    dey
+    bpl .LAB_F285
+    ldy #8
+.LAB_F292
+    lda TestTableB,Y
+    ldx TestTableA,Y
+    sta 0,X
+    dey
+    bpl .LAB_F292
+    ldy #8
+.LAB_F29F
+    lda TestTableB,Y
+    ldx TestTableA,Y
+    eor 0,X
+    bne .LAB_F2CD
+    dey
+    bpl .LAB_F29F
+    ldy #8
+.LAB_F2AE
+    lda TestTableB,Y
+    eor #$FF
+    ldx TestTableA,Y
+    sta 0,X
+    dey
+    bpl .LAB_F2AE
+    ldy #8
+.LAB_F2BD
+    lda TestTableB,Y
+    eor #$FF
+    ldx TestTableA,Y
+    eor 0,X
+    bne .LAB_F2CD
+    dey
+    bpl .LAB_F2BD
+    clc
+.LAB_F2CD
+    ldy #8
+.LAB_F2CF
+    ldx TestTableA,Y
+    lda $14,Y
+    sta 0,X
+    dey
+    bpl .LAB_F2CF
+    rol A
+    plp
+    ror A
+    rts
+TestTableA
+.byte   0
+.byte   1
+.byte   2
+.byte   4
+.byte   8
+.byte   16
+.byte   32
+.byte   64
+TestTableB
+.byte   240
+.byte   225
+.byte   210
+.byte   195
+.byte   180
+.byte   165
+.byte   150
+.byte   135
+.byte   120
+SelfTest3
+    ldx #$C0
+.LAB_F2F2
+    dex
+    cpx #$FF
+    beq .exit
+    ldy 0,X
+    lda #0
+    sec
+.LAB_F2FC
+    rol A
+    sta 0,X
+    cmp 0,X
+    bne .LAB_F321
+    eor #$FF
+    sta 0,X
+    cmp 0,X
+    bne .LAB_F321
+    eor #$FF
+    clc
+    bne .LAB_F2FC
+    sty 0,X
+    bit Int_Ctrl_Reg
+    bpl .LAB_F2F2
+    stx $15
+    jsr FUN_EB97
+    ldx $15
+    bra .LAB_F2F2
+.exit
+    clc
+    rts
+.LAB_F321
+    sty 0,x
+    sec
+    rts
+Reset_Interrupt
+    nop
+    clb SYS_RST,Port_P3
+.LAB_F328
+    bit Int_Ctrl_Reg
+    bpl .LAB_F328
+    jsr FUN_EB97
+.LAB_F32F
+    bit Int_Ctrl_Reg
+    bpl .LAB_F32F
+    jsr FUN_EB97
+    bbc RESET,Port_P3,.LAB_F32F
+    jmp ResetEntry
+Timer_2_Vec
+    rti
+Timer_1_Vec
+    rti
+Timer_X_Vec
+    rti
+Interrupt_1
+    rti
 
+.org    $FF00
+.byte   $A2
+.byte   $03
+DelayLoop
+    dex
+    bne DelayLoop
+DelayExit
+    rts
+
+.org    $FFF4
+.word   Reset_Interrupt
+.word   Timer_2_Vec
+.word   Timer_1_Vec
+.word   Timer_X_Vec
+.word   Interrupt_1
+.word   PMGRResetEntry
