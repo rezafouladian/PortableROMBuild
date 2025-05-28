@@ -19,25 +19,50 @@ SOUND_LATCH         =   2
 OFF_HOOK            =   3
 
 ; A/D control register
+AD_Ctrl_Reg         =   $F3
 AD_Conv             =   3
 
+Int_Ctrl_Reg        =   $FE
 AD_Int_Req          =   5           ; AD interrupt request bit
                                     ; Shared with Timer 1 interrupt bit
                                     ; When bit 3 of A/D control register = 1,
                                     ; the interrupt is from A/D
 Int1_Req            =   7           ; Interrupt 1 request bit
 
+PWM_Ctrl_Reg        =   $F5
+
 Port_P1             =   $E2
+Port_P1_DIR         =   $E3
 NC                  =   0
-AKD                 =   1
+AKD                 =   1           ; AKD
 STOP_CLK            =   2           ; Stop clocks to save power
 CHRG_ON             =   3           ; CHRG_ON* - Charger connected (active low)
 KBD_RST             =   4           ; KBD_RST* - Keyboard controller reset (active low)
-HICHG               =   5           ;
-RING_DETECT         =   6
-MODEM_AB            =   7
+HICHG               =   5           ; HICHG
+RING_DETECT         =   6           ; RING_DETECT
+MODEM_AB            =   7           ; MODEM_A/B
 
+; Port P2
+VIA_Com             =   $E4
+VIA_Com_DIR         =   $E5
+
+Port_P3             =   $E8
+Port_P3_DIR         =   $E9
+RESET               =   0
+SYS_RST             =   1
+VIA_TEST            =   2
+SOUND_OFF           =   3
 OneSec              =   4           ; 1SEC* - One second interrupt (active low)
+PMINT               =   5           ; PMINT*
+PMACK               =   6           ; PMACK*
+PMREQ               =   7           ; PMREQ*
+
+Port_P4             =   $E9
+Port_P4_DIR         =   $EB
+ADB_Out             =   0
+ADB_In              =   1
+DISP_BLANK          =   2           ; DISP_BLANK*
+MODEM_INS           =   3           ; MODEM_INS*
 
 
 .org    $E800
