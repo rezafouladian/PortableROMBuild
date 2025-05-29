@@ -194,7 +194,7 @@ CommandReceive
 .LAB_E913
     bit Int_Ctrl_Reg
     bmi .LAB_E94A
-    bbs 1,$6,LAB_E95C
+    bbs 1,$6,.LAB_E95C
     bbs PMREQ,Port_P3,.LAB_E913
     jsr ReceiveCommand
     bcs CommandReceive
@@ -209,7 +209,7 @@ CommandReceive
     jsr readADB
     bra CommandReceive
 .OtherCommands
-    and #$F0
+    and #$F0                        ; Discard the subcommand number
     lsr A
     lsr A
     lsr A
@@ -218,16 +218,16 @@ CommandReceive
     sta $1B
     lda CMDTable+1,X
     sta $1C
-    jsr (1B)
+    jsr ($1B)                       ; Jump to the command handler
     bra CommandReceive
 .LAB_E94A
     ldm #7,VIA_Com
     ldm #$FF,VIA_Com_DIR
     jsr FUN_EB97
-    bbs 0,$1,LAB_E998
-    bbs 1,$6,LAB_E95C
-    bbc 2,$6,LAB_E998
-LAB_E95C
+    bbs 0,$1,.LAB_E998
+    bbs 1,$6,.LAB_E95C
+    bbc 2,$6,.LAB_E998
+.LAB_E95C
     ldm #7,VIA_Com
     ldm #$FF,VIA_Com_DIR
     lda $6
@@ -237,7 +237,7 @@ LAB_E95C
     sta $7
     lda $5
     and #$F
-    bne LAB_E982
+    bne .LAB_E982
     seb ADB_Out,Port_P4
     ldx #0
     jsr DelayLoop
@@ -245,27 +245,27 @@ LAB_E95C
     jsr DelayLoop
     clb ADB_Out,Port_P4
     seb 4,$6
-    bra LAB_E996
-LAB_E982
+    bra .LAB_E996
+.LAB_E982
     jsr FUN_EBEC
-    bcc LAB_E98B
+    bcc .LAB_E98B
     seb 4,$6
-    bra LAB_E996
-LAB_E98B
+    bra .LAB_E996
+.LAB_E98B
     jsr FUN_ECC3
-    bcc LAB_E996
-    bbc 2,$6,LAB_E996
-    bbc 3,$6,LAB_E998
-LAB_E996
+    bcc .LAB_E996
+    bbc 2,$6,.LAB_E996
+    bbc 3,$6,.LAB_E998
+.LAB_E996
     seb 0,$1
-LAB_E998
+.LAB_E998
     lda $1
     and #%111
-    beq LAB_E9A4
+    beq .LAB_E9A4
     clb PMINT,Port_P3
     seb 1,$0
     seb PMINT,Port_P3
-LAB_E9A4
+.LAB_E9A4
     jmp CommandReceive
 ReceiveCommand
     jsr PM_ReceiveByte_Wait
@@ -279,13 +279,13 @@ WriteToLocation
     ldm #$13,$1B                    ; Set start address to $13
     ldm #$00,$1C
 WriteBytesRAM
-    ldy #0
+    ldy #0                          ; Initialize pointer offset
 WriteBytesLoop
     jsr PM_ReceiveByte_Wait
     bcs ReceiveCommand_Exit
     sta ($1B),Y
     iny
-    dec $12
+    dec ByteCount
     bne WriteBytesLoop
     clc
 ReceiveCommand_Exit
@@ -322,8 +322,8 @@ ReceiveByte_Done
     clc
     rts
 ReturnDataToHost
-    ldm #$13,$1B
-    ldm #$00,$1C
+    ldm #$13,WriteLocation
+    ldm #$00,WriteLocation+1
 ReturnDataToHost2
     lda $11
     jsr SendByte
@@ -1119,6 +1119,7 @@ Time_PRAM_Command
     lda $2
     clc
     rts
+; CombineTime
 CombineTime
     lda #0
     clc
@@ -1255,6 +1256,9 @@ Battery_Command
     clb 5,PowerFlags
 .exit
     rts
+; readINT
+;
+; Read Power Manager interrupt data (for the host to service the interrupt)
 readINT
     lda $1
     sta $13
