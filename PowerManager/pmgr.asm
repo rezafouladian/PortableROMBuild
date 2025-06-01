@@ -3,6 +3,8 @@ ByteCount           =   $12
 
 WriteLocation       =   $1B
 
+PowerFlags          =   $1D
+
 ref5V_Level         =   $1F
 lowBatteryLevel     =   $71
 deadBatteryLevel    =   $72
@@ -366,43 +368,43 @@ SendByte
     ldm #0,VIA_Com_DIR              ; Set direction back to input
     clc                             ; Return success
     rts
-FUN_EA5E
+BatteryManage
     jsr ReadBattery
     lda HICHGLevel
-    cmp #732-512
-    bcc .LAB_EA69
-    lda #732-512
-.LAB_EA69
+    cmp #732-512                    ; Compare max HICHG level
+    bcc .ref5V_Check                   ; Skip if it's lower than the max
+    lda #732-512                    ; Set it back to the max
+.ref5V_Check
     cmp ref5V_Level
     bcs .LAB_EA6D
 .LAB_EA6D
-    lda $1D
+    lda PowerFlags
     asl A
     asl A
     asl A
     eor Port_P1
     bbs 3,A,.LAB_EA7D
     seb 1,$1
-    seb 5,$1D
+    seb 5,PowerFlags
     jsr batteryNow
 .LAB_EA7D
-    clb 0,$1D
-    clb 3,$1D
-    clb 6,$1D
+    clb 0,PowerFlags
+    clb 3,PowerFlags
+    clb 6,PowerFlags
     bbc CHRG_ON,Port_P1,.HICHG_OnCheck
     lda lowBatteryLevel
     cmp #602-512
-    bcs .LAB_EAD9
+    bcs .RestoreDefaults
     cmp #571-512
-    bcc .LAB_EAD9
+    bcc .RestoreDefaults
     lda deadBatteryLevel
     cmp #602-512
-    bcs .LAB_EAD9
+    bcs .RestoreDefaults
     cmp #571-512
-    bcc .LAB_EAD9
+    bcc .RestoreDefaults
     lda lowBatteryLevel
     cmp deadBatteryLevel
-    bcc .LAB_EAD9
+    bcc .RestoreDefaults
 .LAB_EAA0
     lda lowBatteryLevel
     lsr A
@@ -433,10 +435,10 @@ FUN_EA5E
 .LAB_EAD5
     ldm #0,$21
     rts
-.LAB_EAD9
-    ldm #590-512,lowBatteryLevel
-    ldm #574-512,deadBatteryLevel
-    ldm #712-512,HICHGLevel
+.RestoreDefaults
+    ldm #590-512,lowBatteryLevel    ; Set default low battery level
+    ldm #574-512,deadBatteryLevel   ; Set default dead battery level
+    ldm #712-512,HICHGLevel         ; Set default HICHG level
     jsr FUN_EF84
     sta $AF
     bra .LAB_EAA0
@@ -578,7 +580,7 @@ FUN_EB97
     cmp timeD
     seb 5,$0
 .LAB_EBE8
-    jsr FUN_EA5E
+    jsr BatteryManage
     rts
 FUN_EBEC
     lda $6
@@ -1086,7 +1088,7 @@ Time_PRAM_Command
     sta ByteCount
     jsr ReturnDataToHost2
     rts
-.FUN_EF84
+FUN_EF84
     txa
     pha
     ldx #0
