@@ -1051,8 +1051,8 @@ Time_PRAM_Command
     lda CommandByte
     cmp cmd_timeRead
     bne .pramRead
-    ldm #timeD,$1B
-    ldm #0,$1C
+    ldm #timeD,WriteLocation
+    ldm #0,WriteLocation+1
     ldm #4,ByteCount
     jsr ReturnDataToHost2
     rts
@@ -1420,7 +1420,7 @@ Sound_Command
     seb SOUND_OFF,Port_P3
     bra .SoundLatch
 .TurnSoundOn
-    clb SOUND_FF,Port_P3
+    clb SOUND_OFF,Port_P3
 .SoundLatch
     bbc 1,$13,.exit
     seb SOUND_PWR,Port_P0
