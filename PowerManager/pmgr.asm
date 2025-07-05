@@ -48,7 +48,7 @@ SYS_PWR             =   7
 
 Port_P1             =   $E2
 Port_P1_DIR         =   $E3
-NC                  =   0
+NC                  =   0           ; Not connected, probably for testing
 AKD                 =   1           ; AKD
 STOP_CLK            =   2           ; Stop clocks to save power
 CHRG_ON             =   3           ; CHRG_ON* - Charger connected (active low)
@@ -58,8 +58,10 @@ RING_DETECT         =   6           ; RING_DETECT
 MODEM_AB            =   7           ; MODEM_A/B
 
 ; Port P2
-VIA_Com             =   $E4
+VIA_Com             =   $E4         ; 8-bit communication bus with VIA
 VIA_Com_DIR         =   $E5
+Dir_Read            =   %00000000
+Dir_Write           =   %11111111
 
 Port_P3             =   $E8
 Port_P3_DIR         =   $E9
@@ -76,8 +78,8 @@ Port_P4             =   $E9
 Port_P4_DIR         =   $EB
 ADB_Out             =   0
 ADB_In              =   1
-DISP_BLANK          =   2           ; DISP_BLANK*
-MODEM_INS           =   3           ; MODEM_INS*
+DISP_BLANK          =   2           ; DISP_BLANK* - Turns the display off (active low)
+MODEM_INS           =   3           ; MODEM_INS* - When a modem is installed (active low)
 
 
 .org    $E800
@@ -149,7 +151,7 @@ InitPorts
     ldm #%11000001,Port_P1
     ldm #%10110101,Port_P1_DIR
     ldm #%11111111,VIA_Com
-    ldm #%00000000,VIA_Com_DIR
+    ldm #Dir_Read,VIA_Com_DIR
     ldm #%11110101,Port_P3
     ldm #%01111010,Port_P3_DIR
     ldm #%1110,Port_P4
@@ -188,11 +190,11 @@ LAB_E8FB
     seb SYS_RST,Port_P3
     seb SOUND_PWR,Port_P0
     clb SOUND_PWR,Port_P0
-    clb 1,Int_Ctrl_Reg
-    seb 0,Int_Ctrl_Reg
+    clb Int2_Req,Int_Ctrl_Reg
+    seb Int2_Enb,Int_Ctrl_Reg
     cli
 CommandReceive
-    ldm #0,VIA_Com_DIR
+    ldm #Dir_Read,VIA_Com_DIR
 .LAB_E913
     bit Int_Ctrl_Reg
     bmi .LAB_E94A
@@ -224,14 +226,14 @@ CommandReceive
     bra CommandReceive
 .LAB_E94A
     ldm #7,VIA_Com
-    ldm #$FF,VIA_Com_DIR
+    ldm #Dir_Write,VIA_Com_DIR
     jsr FUN_EB97
     bbs 0,$1,.LAB_E998
     bbs 1,$6,.LAB_E95C
     bbc 2,$6,.LAB_E998
 .LAB_E95C
     ldm #7,VIA_Com
-    ldm #$FF,VIA_Com_DIR
+    ldm #Dir_Write,VIA_Com_DIR
     lda $6
     and #%101
     sta $6
@@ -348,7 +350,7 @@ ReturnDataExit
     rts
 SendByte
     bbc PMREQ,Port_P3,.Fail
-    ldm #%11111111,VIA_Com_DIR      ; Set direction to output
+    ldm #Dir_Write,VIA_Com_DIR      ; Set direction to output
     sta VIA_Com                     ; Send byte to VIA
     clb PMACK,Port_P3
     bbc PMREQ,Port_P3,.Done         ; Check for transfer acknowledge
@@ -360,12 +362,12 @@ SendByte
     bne .Loop                       ; Loop until timeout
 .Fail
     seb PMACK,Port_P3
-    ldm #0,VIA_Com_DIR              ; Set direction back to input
+    ldm #Dir_Read,VIA_Com_DIR              ; Set direction back to input
     sec                             ; Return failure
     rts
 .Done
     seb PMACK,Port_P3
-    ldm #0,VIA_Com_DIR              ; Set direction back to input
+    ldm #Dir_Read,VIA_Com_DIR              ; Set direction back to input
     clc                             ; Return success
     rts
 BatteryManage
