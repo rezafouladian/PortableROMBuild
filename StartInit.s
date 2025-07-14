@@ -2462,37 +2462,37 @@ Unknown_function:
 ;           D1.l    Up to 4 bytes to transfer or receive
 ; Outputs:  A0      0 if successful, error code otherwise
 QuasiPwrMgr:
-            movea.l A6,A5
-            move    SR,D5
+            movea.l A6,A5                           ; Save return address
+            move    SR,D5                           ; Save status register
             swap    D5
-            lea     VIA_Base,A1
-            move.b  #$10,(VIA_IER-VIA_Base,A1)
-            tst.w   Clock16M
-            move.b  #$FF,(VIA_DDR_A-VIA_Base,A1)
-            move.b  (VIA_ORA-VIA_Base,A1),D2
+            lea     VBase,A1
+            move.b  #1<<ifCB1,(vIER,A1)             ; Enable interrupts for PMINT* only
+            tst.w   Clock16M                        ; Run at full speed
+            move.b  #$FF,(vDIRA,A1)                 ; Set power manager interface to output
+            move.b  (vBufA,A1),D2
             swap    D2
             move.w  #1,D2
 .L1:
-            clr.b   (VIA_DDR_A-VIA_Base,A1)
+            clr.b   (vDIRA,A1)
             swap    D5
             move    D5,SR
             swap    D5
             move.w  #1080,D5
 .L2:
-            btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
-            beq.b   .L3
-            cmpi.b  #$FF,(VIA_ORA-VIA_Base,A1)
-            beq.b   .L4
+            btst.b  #PMack,(vBufB,A1)               ; Check PMack
+            beq.b   .L3                             ; Wait if handshake acknoledge is still asserted
+            cmpi.b  #$FF,(vBufA,A1)
+            beq.b   .L4                             ; Ready to continue
 .L3:
             dbf     D5,.L2                          ; Loop until timeout
-            movea.w #$CD38,A0
+            movea.w #$CD38,A0                       ; Return power manager busy error
             bra.w   .Exit
 .L4:
-            ori.w   #$300,SR
+            ori.w   #HiIntMask,SR
             rol.w   #8,D0
             move.b  D0,D5
             BSR6    QPM_Send
-            beq.b   .L6
+            beq.b   .L6                             ; If there was no error, continue
             ror.w   #8,D0
             dbf     D2,.L1
             bra.w   .Exit
@@ -2502,21 +2502,21 @@ QuasiPwrMgr:
             move.b  D0,D2
             move.b  D0,D5
             BSR6    QPM_Send
-            bne.b   .Exit
+            bne.b   .Exit                           ; Exit if there was an error
             subq.w  #1,D2
             bmi.b   .L10
 .L8:
             rol.l   #8,D1
             move.b  D1,D5
             BSR6    QPM_Send
-            bne.b   .Exit
+            bne.b   .Exit                           ; Exit if there was an error
             dbf     D2,.L8
 .L10:
             btst.l  #$B,D0
             beq.b   .L18
-            move.l  #$2D690,D3
+            move.l  #186000,D3
 .L11:
-            btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
+            btst.b  #PMack,(vBufB,A1)
             beq.b   .L12
             subq.l  #1,D3
             bne.b   .L11
@@ -2537,7 +2537,7 @@ QuasiPwrMgr:
 .L15:
             move.b  D0,D2
             subq.b  #1,D2
-            bmi.b   .L19
+            bmi.b   .SuccessExit
 .L16:
             BSR6    QPM_Receive
             bne.b   .Exit                           ; Exit if there was an error
@@ -2549,60 +2549,61 @@ QuasiPwrMgr:
             sub.b   D0,D2
             asl.b   #3,D2
             asl.l   D2,D1
-.L19:
-            suba.l  A0,A0
+.SuccessExit:
+            suba.l  A0,A0                           ; Clear any error codes
 .Exit:
-            move.b  #$FF,(VIA_DDR_A-VIA_Base,A1)
+            move.b  #$FF,(vDIRA,A1)
             swap    D2
-            move.b  D2,(VIA_ORA-VIA_Base,A1)
-            clr.b   (VIA_DDR_A-VIA_Base,A1)
-            move.b  #$90,(VIA_IER-VIA_Base,A1)
+            move.b  D2,(vBufA,A1)
+            clr.b   (vDIRA,A1)
+            move.b  #$90,(vIER,A1)
             swap    D5
-            move    D5,SR
+            move    D5,SR                           ; Restore status register
             cmpa.w  #0,A0
             jmp     (A5)                            ; Return to original caller
+; QPM_Send
 QPM_Send:
             suba.l  A0,A0                           ; Clear any error codes
-            move.b  #$FF,(VIA_DDR_A-VIA_Base,A1)
-            move.b  D5,(VIA_ORA-VIA_Base,A1)
+            move.b  #$FF,(vDIRA,A1)
+            move.b  D5,(vBufA,A1)
             move.w  #460,D5                         ; Timeout loop counter
-            bclr.b  #PMreq,(VIA_BufB-VIA_Base,A1)
+            bclr.b  #PMreq,(vBufB,A1)               ; Assert PMreq*
 .L22:
-            btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
+            btst.b  #PMack,(vBufB,A1)
             beq.b   .L23
             dbf     D5,.L22                         ; Loop until timeout
             movea.w #$CD36,A0
             bra.b   QPM_DataEnd
 .L23:
             move.w  #64,D5
-            bset.b  #PMreq,(VIA_BufB-VIA_Base,A1)
+            bset.b  #PMreq,(vBufB,A1)               ; Clear PMreq*
 .L24:
-            btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
+            btst.b  #PMack,(vBufB,A1)
             bne.b   QPM_DataEnd
             dbf     D5,.L24                         ; Loop until timeout
             movea.w #$CD35,A0                       ; Set error: timeout send handshake finish
 QPM_DataEnd:
-            bset.b  #PMreq,(VIA_BufB-VIA_Base,A1)
-            clr.b   (VIA_DDR_A-VIA_Base,A1)
+            bset.b  #PMreq,(vBufB,A1)               ; Clear PMreq*
+            clr.b   (vDIRA,A1)
             cmpa.w  #0,A0                           ; If there was an error, set the zero register
             jmp     (A6)                            ; Return to main QuasiPwrMgr caller
 QPM_Receive:
             suba.l  A0,A0                           ; Clear any error codes
-            clr.b   (VIA_DDR_A-VIA_Base,A1)
+            clr.b   (vDIRA,A1)
             move.w  #64,D5
 .L27:
-            btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
+            btst.b  #PMack,(vBufB,A1)
             beq.b   .L28
             dbf     D5,.L27
             movea.w #$CD34,A0
             bra.b   QPM_DataEnd
 .L28:
             swap    D0
-            bclr.b  #PMreq,(VIA_BufB-VIA_Base,A1)
+            bclr.b  #PMreq,(vBufB,A1)               ; Assert PMreq*
             move.w  #64,D5
-            move.b  (VIA_ORA-VIA_Base,A1),D0
+            move.b  (vBufA,A1),D0
 .L29:
-            btst.b  #PMack,(VIA_BufB-VIA_Base,A1)
+            btst.b  #PMack,(vBufB,A1)
             bne.b   .L30
             dbf     D5,.L29
             movea.w #$CD33,A0
@@ -2615,6 +2616,7 @@ STPWRMGR:
             BSR6    QuasiPwrMgr
             movem.l (SP)+,D2-D5/A0-A6
             rts
+; DataBusTest
 DataBusTest:
             moveq   #1,D0
             moveq   #-2,D1
