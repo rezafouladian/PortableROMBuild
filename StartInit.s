@@ -2512,7 +2512,7 @@ QuasiPwrMgr:
             bne.b   .Exit                           ; Exit if there was an error
             dbf     D2,.L8
 .L10:
-            btst.l  #$B,D0
+            btst.l  #11,D0                          ; Is this a read
             beq.b   .L18
             move.l  #186000,D3
 .L11:
