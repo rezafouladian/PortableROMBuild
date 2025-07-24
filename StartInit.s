@@ -1061,11 +1061,11 @@ VIASetup:
             moveq   #0,D1
             move.w  #ErrVIA1,D7
             lea     VIA_Base,A1
-            bset.b  #PMreq,(VIA_BufB-VIA_Base,A1)
-            move.b  #%10111001,(VIA_DDR_B-VIA_Base,A1)
-            bclr.b  #SyncM,(VIA_BufB-VIA_Base,A1)
+            bset.b  #PMreq,(vBufB,A1)
+            move.b  #%10111001,(vDIRB,A1)
+            bclr.b  #SyncM,(vBufB,A1)
             lea     VIA_Base,A2
-            btst.b  #TestJumper,(VIA_BufB-VIA_Base,A2)  ; Is the test "jumper" installed?
+            btst.b  #TestJumper,(vBufB,A2)              ; Is the test "jumper" installed?
             bne.b   PowerManagerInit
             bset.l  #test,D7                            ; Jumper found, flag bit for later
 

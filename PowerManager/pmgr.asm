@@ -362,19 +362,19 @@ SendByte
     bne .Loop                       ; Loop until timeout
 .Fail
     seb PMACK,Port_P3
-    ldm #Dir_Read,VIA_Com_DIR              ; Set direction back to input
+    ldm #Dir_Read,VIA_Com_DIR       ; Set direction back to input
     sec                             ; Return failure
     rts
 .Done
     seb PMACK,Port_P3
-    ldm #Dir_Read,VIA_Com_DIR              ; Set direction back to input
+    ldm #Dir_Read,VIA_Com_DIR       ; Set direction back to input
     clc                             ; Return success
     rts
 BatteryManage
     jsr ReadBattery
     lda HICHGLevel
     cmp #732-512                    ; Compare max HICHG level
-    bcc .ref5V_Check                   ; Skip if it's lower than the max
+    bcc .ref5V_Check                ; Skip if it's lower than the max
     lda #732-512                    ; Set it back to the max
 .ref5V_Check
     cmp ref5V_Level
