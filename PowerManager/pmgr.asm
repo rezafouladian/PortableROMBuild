@@ -1,15 +1,40 @@
+wake_time_on        =   4     
+ring_wake_on        =   7
+
+IntFlags            =   $1
+ADBInt              =   0
+
+LastADBCMD          =   $5
+
+ADBStatus           =   $6
+adb_newcmd          =   1
+adb_autopoll        =   2
+adb_srq             =   3
+adb_noreply         =   4
+adb_buscontention   =   5
+adb_error           =   7
+
+ADBCMDLength        =   $7
+
 CommandByte         =   $11
 ByteCount           =   $12
 
 WriteLocation       =   $1B
 
 PowerFlags          =   $1D
+charger_connected   =   0
+hichg_on            =   1
+hichg_overflow      =   2
+battery_dead        =   3
+battery_low         =   4
+charger_changed     =   5
 
 ref5V_Level         =   $1F
 lowBatteryLevel     =   $71
 deadBatteryLevel    =   $72
 HICHGLevel          =   $73
 
+cmd_readADB         =   $28
 cmd_readINT         =   $78
 
 readBit             =   3           ; Commands $x8-$xF are read commands
@@ -127,7 +152,7 @@ InitRAM
 LAB_E884
     lda #0
     sta $0
-    sta $6
+    sta ADBStatus
     jsr CombineTime
     cmp Time
     beq LAB_E89A
@@ -198,7 +223,7 @@ CommandReceive
 .LAB_E913
     bit Int_Ctrl_Reg
     bmi .LAB_E94A
-    bbs 1,$6,.LAB_E95C
+    bbs adb_newcmd,ADBStatus,.ADBAction
     bbs PMREQ,Port_P3,.LAB_E913
     jsr ReceiveCommand
     bcs CommandReceive
@@ -228,18 +253,18 @@ CommandReceive
     ldm #7,VIA_Com
     ldm #Dir_Write,VIA_Com_DIR
     jsr FUN_EB97
-    bbs 0,$1,.LAB_E998
-    bbs 1,$6,.LAB_E95C
-    bbc 2,$6,.LAB_E998
-.LAB_E95C
+    bbs ADBInt,IntFlags,.noADBAction
+    bbs adb_newcmd,ADBStatus,.ADBAction
+    bbc adb_autopoll,ADBStatus,.noADBAction
+.ADBAction
     ldm #7,VIA_Com
     ldm #Dir_Write,VIA_Com_DIR
-    lda $6
+    lda ADBStatus
     and #%101
-    sta $6
+    sta ADBStatus
     lda $3
-    sta $7
-    lda $5
+    sta ADBCMDLength
+    lda LastADBCMD
     and #$F
     bne .LAB_E982
     seb ADB_Out,Port_P4
@@ -248,29 +273,30 @@ CommandReceive
     jsr DelayLoop
     jsr DelayLoop
     clb ADB_Out,Port_P4
-    seb 4,$6
+    seb adb_noreply,ADBStatus
     bra .LAB_E996
 .LAB_E982
-    jsr FUN_EBEC
+    jsr ADBCMDDo
     bcc .LAB_E98B
-    seb 4,$6
+    seb adb_noreply,ADBStatus
     bra .LAB_E996
 .LAB_E98B
     jsr FUN_ECC3
     bcc .LAB_E996
-    bbc 2,$6,.LAB_E996
-    bbc 3,$6,.LAB_E998
+    bbc adb_autopoll,ADBStatus,.LAB_E996
+    bbc adb_srq,ADBStatus,.noADBAction
 .LAB_E996
-    seb 0,$1
-.LAB_E998
-    lda $1
+    seb ADBInt,IntFlags
+.noADBAction
+    lda IntFlags
     and #%111
-    beq .LAB_E9A4
+    beq .noInterrupts
     clb PMINT,Port_P3
     seb 1,$0
     seb PMINT,Port_P3
-.LAB_E9A4
+.noInterrupts
     jmp CommandReceive
+;
 ReceiveCommand
     jsr PM_ReceiveByte_Wait
     bcs ReceiveCommand_Exit
@@ -329,10 +355,10 @@ ReturnDataToHost
     ldm #$13,WriteLocation
     ldm #$00,WriteLocation+1
 ReturnDataToHost2
-    lda $11
+    lda CommandByte
     jsr SendByte
     bcs ReturnDataExit
-    lda $12
+    lda ByteCount
     jsr SendByte
     bcs ReturnDataExit
     tst $12
@@ -386,12 +412,12 @@ BatteryManage
     asl A
     eor Port_P1
     bbs 3,A,.LAB_EA7D
-    seb 1,$1
-    seb 5,PowerFlags
+    seb 1,IntFlags
+    seb charger_changed,PowerFlags
     jsr batteryNow
 .LAB_EA7D
-    clb 0,PowerFlags
-    clb 3,PowerFlags
+    clb charger_connected,PowerFlags
+    clb battery_dead,PowerFlags
     clb 6,PowerFlags
     bbc CHRG_ON,Port_P1,.HICHG_OnCheck
     lda lowBatteryLevel
@@ -418,19 +444,19 @@ BatteryManage
     sta $20
     lda BatteryLevel
     bcc .LAB_EABC
-    bbc 4,$1D,.LAB_EAD5
-    clb 4,$1D
-    seb 1,$1
+    bbc battery_low,PowerFlags,.LAB_EAD5
+    clb battery_low,PowerFlags
+    seb 1,IntFlags
     bra .LAB_EAD5
 .LAB_EABC
-    seb 4,$1D
-    seb 1,$1
+    seb battery_low,PowerFlags
+    seb 1,IntFlags
     cmp $20
     bcs .LAB_EAD5
-    seb 6,$1D
+    seb 6,PowerFlags
     cmp deadBatteryLevel
     bcs .LAB_EAD5
-    seb 3,$1D
+    seb battery_dead,PowerFlags
     bbs 6,$0,.LAB_EAD5
     bbc VIA_TEST,Port_P3,.LAB_EAD5
     jmp Sleep
@@ -445,17 +471,17 @@ BatteryManage
     sta $AF
     bra .LAB_EAA0
 .HICHG_OnCheck
-    seb 0,$1D
-    clb 4,$1D
+    seb charger_connected,PowerFlags
+    clb battery_low,PowerFlags
     lda $21
     bne .LAB_EB03
     seb HICHG,Port_P1
     seb 5,$14
-    seb 1,$1D
+    seb hichg_on,PowerFlags
     ldm #1,$21
     ldm #1,$22
     ldm #1,$23
-    clb 2,$1D
+    clb hichg_overflow,PowerFlags
     rts
 .LAB_EB03
     cmp #2
@@ -463,12 +489,12 @@ BatteryManage
     lda BatteryLevel
     cmp #720-512
     bcs .LAB_EB1B
-    bbs 2,$1D,.LAB_EB32
+    bbs hichg_overflow,PowerFlags,.LAB_EB32
     inc $22
     bne .LAB_EB32
     inc $23
     bne .LAB_EB32
-    seb 2,$1D
+    seb hichg_overflow,PowerFlags
     rts
 .LAB_EB1B
     ldm #2,$21
@@ -482,7 +508,7 @@ BatteryManage
     ldm #3,$21
     clb HICHG,Port_P1
     clb 5,$14
-    clb 1,$1D
+    clb hichg_on,PowerFlags
 .LAB_EB32
     lda BatteryLevel
     cmp #602-512
@@ -566,7 +592,7 @@ FUN_EB97
 .LAB_EBC0
     jsr CombineTime
     sta Time
-    bbc 4,$0,.LAB_EBE8
+    bbc wake_time_on,$0,.LAB_EBE8
     bbc 6,$0,.LAB_EBE8
     bbc 5,$0,.LAB_EBE8
     lda $2D
@@ -584,11 +610,12 @@ FUN_EB97
 .LAB_EBE8
     jsr BatteryManage
     rts
-FUN_EBEC
-    lda $6
+;
+ADBCMDDo
+    lda ADBStatus
     and #5
-    sta $6
-    lda $5
+    sta ADBStatus
+    lda LastADBCMD
     sta $4
     seb ADB_Out,Port_P4
     ldx #131
@@ -647,23 +674,23 @@ FUN_EBEC
     bne .LAB_EC4C
     bra .LAB_EC58
 .LAB_EC54
-    seb 3,$6
+    seb adb_srq,ADBStatus
     bra .LAB_EC60
 .LAB_EC58
-    seb 5,$6
-    seb 7,$6
+    seb adb_buscontention,ADBStatus
+    seb adb_error,ADBStatus
     clb ADB_Out,Port_P4
     sec
     rts
 .LAB_EC60
-    tst $7
+    tst ADBCMDLength
     bne .LAB_EC66
     clc
     rts
 .LAB_EC66
     ldy #8
-    ldx $7
-    dec $7
+    ldx ADBCMDLength
+    dec ADBCMDLength
     lda 7,X
     sta $4
     ldx #25
@@ -702,10 +729,10 @@ FUN_EBEC
     dey
     bne .LAB_EC88
     ldy #8
-    ldx $7
+    ldx ADBCMDLength
     lda 7,X
     sta $4
-    dec $7
+    dec ADBCMDLength
     bpl .LAB_EC8D
     nop
     seb ADB_Out,Port_P4
@@ -715,7 +742,7 @@ FUN_EBEC
     clc
     rts
 FUN_ECC3
-    ldm #0,$7
+    ldm #0,ADBCMDLength
     txs
     stx $2
     ldx #$10
@@ -730,8 +757,8 @@ FUN_ECC3
     bne .LAB_ECD2
     bra .LAB_ECDD
 .LAB_ECDD
-    seb 7,$6
-    seb 4,$6
+    seb adb_error,ADBStatus
+    seb adb_noreply,ADBStatus
     ldx $2
     txs
     sec
@@ -875,7 +902,7 @@ FUN_ECC3
     eor #$FF
     clc
     adc #$A
-    sta $7
+    sta ADBCMDLength
     tay
     beq #$EF0F
     ldx #8
@@ -885,7 +912,7 @@ FUN_ECC3
     dex
     dey
     bne .LAB_EE00
-    ldx $7
+    ldx ADBCMDLength
 .LAB_EE0F
     clc
     rts
@@ -961,16 +988,16 @@ Power_Command
     jsr ReturnDataToHost
     rts
 readADB
-    ldm #1,$1C
-    ldm #5,$1B
-    lda $7
+    ldm #0,$1C                      
+    ldm #LastADBCMD,$1B                      
+    lda ADBCMDLength                ; ADB data length?
     clc
-    adc #3
+    adc #3                          ; Send three bytes, plus ADB data
     sta ByteCount
     jsr ReturnDataToHost2
     bcs .exit
     bbs 1,$0,.exit
-    clb 0,$1
+    clb ADBInt,IntFlags
 .exit
     rts
 ADB_Command
@@ -980,18 +1007,18 @@ ADB_Command
     cmp cmd_pMgrADBoff
     bne .bad_command
 .pMgrADBoff
-    ldm #1,$6
-    clb 0,$1
+    ldm #1,ADBStatus
+    clb ADBInt,IntFlags
     clc
     rts
 .pMgrADB
     jsr WriteToLocation
-    clb 0,$1
-    lda $13
-    sta $5
-    lda $14
-    sta $6
-    seb 1,$6
+    clb ADBInt,IntFlags
+    lda $13                         ; Read ADB command
+    sta LastADBCMD
+    lda $14                         ; Read ADB status
+    sta ADBStatus
+    seb adb_newcmd,ADBStatus
     ldy #0
     ldx $15
     beq .LAB_EECE
@@ -1003,7 +1030,7 @@ ADB_Command
     bne .LAB_EEC5
 .LAB_EECE
     sty $3
-    sty $7
+    sty ADBCMDLength
     clc
     rts
 .bad_command
@@ -1037,14 +1064,14 @@ Time_PRAM_Command
     rts
 .xPramWrite
     ldm #2,ByteCount
-    jsr WriteToLocation
-    lda $13
+    jsr WriteToLocation             ; Get locationa and length from sender
+    lda $13                         ; Retrieve location to write to
     clc
     adc #$2F
-    sta $1B
+    sta $1B                         ; Store adjusted location to write to
     ldm #0,$1C
-    lda $14
-    sta ByteCount
+    lda $14                         ; Retrieve number of bytes to write
+    sta ByteCount                   ; Store number of bytes to write
     jsr WriteBytesRAM
     jsr FUN_EF84
     sta $AF
@@ -1080,7 +1107,7 @@ Time_PRAM_Command
     rts
 .xPramRead
     ldm #2,ByteCount
-    jsr WriteToLocation
+    jsr WriteToLocation             ; Get location and length from sender
     lda $13
     clc
     adc #$2F
@@ -1197,9 +1224,9 @@ Modem_Command
     bbs readBit,CommandByte,.modemRead
     ldm #1,ByteCount
     jsr WriteToLocation
-    clb 7,$0
+    clb ring_wake_on,$0
     bbc RingWakeEnable,$13,.ModemAB
-    seb 7,$0
+    seb ring_wake_on,$0
 .ModemAB
     bbc ModemAorB,$13,.SetModemB
     seb MODEM_AB,Port_P1
@@ -1223,7 +1250,7 @@ Modem_Command
     bbc MODEM_AB,Port_P1,.CheckRingWake
     seb ModemAorB,$13
 .CheckRingWake
-    bbc 7,$0,.CheckModemInstalled
+    bbc ring_wake_on,$0,.CheckModemInstalled
     seb RingWakeEnable,$13
 .CheckModemInstalled
     bbs MODEM_INS,Port_P4,.CheckRingDetect
@@ -1255,22 +1282,23 @@ Battery_Command
     jsr ReturnDataToHost2
     bcs .exit
     bbs 1,$0,.exit
-    clb 2,$1
-    clb 1,$1
-    clb 5,PowerFlags
+    clb 2,IntFlags
+    clb 1,IntFlags
+    clb charger_changed,PowerFlags
 .exit
     rts
 ; readINT
 ;
 ; Read Power Manager interrupt data (for the host to service the interrupt)
 readINT
-    lda $1
+    lda IntFlags
     sta $13
     ldm #1,ByteCount
     jsr ReturnDataToHost
-    clb 3,$1
+    clb 3,IntFlags
     clb 1,$0
     rts
+; Sleep_Command
 Sleep_Command
     lda CommandByte
     cmp cmd_sleepReq
@@ -1339,19 +1367,19 @@ Sleep
     bbs AKD,Port_P1,.LAB_F10F
 .LAB_F0FF
     bbs 5,$0,.LAB_F108
-    bbc 7,$0,.LAB_F0EA
+    bbc ring_wake_on,$0,.LAB_F0EA
     bbs RING_DETECT,Port_P1,.LAB_F0EA
 .LAB_F108
     sei
     clb Int1_Req,Int_Ctrl_Reg
     clb 5,$0
-    clb 4,$0
+    clb wake_time_on,$0
 .LAB_F10F
     sei                             ; Disable interrupts
     clb 6,$0
-    lda $6
+    lda ADBStatus
     and #4
-    sta $6
+    sta ADBStatus
     lda $13
     sta Port_P0
     lda $14
@@ -1390,12 +1418,12 @@ Timer_Command
     ldm #wakeupTimeA,WriteLocation
     ldm #0,WriteLocation+1
     jsr WriteBytesRAM
-    seb 4,$0
+    seb wake_time_on,$0
     rts
 .disableWakeUp
     cmp cmd_disableWakeUp
     bne .timerRead
-    clb 4,$0
+    clb wake_time_on,$0
     rts
 .timerRead
     ldm #5,ByteCount
@@ -1408,7 +1436,7 @@ Timer_Command
     lda wakeupTimeD
     sta $16
     ldm #0,$17
-    bbc 4,$0,.LAB_F184
+    bbc wake_time_on,$0,.LAB_F184
     seb 0,$17
 .LAB_F184
     jsr ReturnDataToHost
