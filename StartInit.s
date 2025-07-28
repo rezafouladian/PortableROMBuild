@@ -2524,19 +2524,19 @@ QuasiPwrMgr:
             bra.b   .Exit
 .L12:
             clr.w   D2
-            BSR6    QPM_Receive
+            BSR6    QPM_Receive                     ; Get command byte
             bne.b   .Exit                           ; Exit if there was an error
             move.b  D5,D0
-            BSR6    QPM_Receive
+            BSR6    QPM_Receive                     ; Get length byte
             bne.b   .Exit                           ; Exit if there was an error
             rol.w   #8,D0
             move.b  D5,D0
             cmpi.b  #4,D0
             bls.b   .L15
-            move.b  #4,D0
+            move.b  #4,D0                           ; Max of 4 bytes
 .L15:
             move.b  D0,D2
-            subq.b  #1,D2
+            subq.b  #1,D2                           ; Decrement length counter
             bmi.b   .SuccessExit
 .L16:
             BSR6    QPM_Receive
@@ -4590,6 +4590,7 @@ SizeMemory:
             jpp     .Exit
 .Exit:
             jmp     (A6)                            ; Restore return address
+; Unknown code segment (unreachable?)
 FUN_00903FC2:
             moveq   #-1,D3
             moveq   #0,D2
