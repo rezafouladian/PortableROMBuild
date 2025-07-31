@@ -265,8 +265,8 @@ CommandReceive
     lda $3
     sta ADBCMDLength
     lda LastADBCMD
-    and #$F
-    bne .LAB_E982
+    and #$F                         ; Check for a reset command
+    bne .ADBNotReset
     seb ADB_Out,Port_P4
     ldx #0
     jsr DelayLoop
@@ -274,18 +274,18 @@ CommandReceive
     jsr DelayLoop
     clb ADB_Out,Port_P4
     seb adb_noreply,ADBStatus
-    bra .LAB_E996
-.LAB_E982
+    bra .ADBFinish
+.ADBNotReset
     jsr ADBCMDDo
     bcc .LAB_E98B
     seb adb_noreply,ADBStatus
-    bra .LAB_E996
+    bra .ADBFinish
 .LAB_E98B
     jsr FUN_ECC3
-    bcc .LAB_E996
-    bbc adb_autopoll,ADBStatus,.LAB_E996
+    bcc .ADBFinish
+    bbc adb_autopoll,ADBStatus,.ADBFinish
     bbc adb_srq,ADBStatus,.noADBAction
-.LAB_E996
+.ADBFinish
     seb ADBInt,IntFlags
 .noADBAction
     lda IntFlags
@@ -613,16 +613,16 @@ FUN_EB97
 ;
 ADBCMDDo
     lda ADBStatus
-    and #5
+    and %101
     sta ADBStatus
     lda LastADBCMD
-    sta $4
+    sta $4                          ; Save a copy of the last ADB command
     seb ADB_Out,Port_P4
-    ldx #131
+    ldx #131                        ; Load delay counter
     jsr DelayLoop
     nop
     clb ADB_Out,Port_P4
-    ldx #6
+    ldx #6                          ; Load delay counter
     jsr DelayLoop
     bbc ADB_In,Port_P4,.LAB_EC58
     nop 
@@ -674,7 +674,7 @@ ADBCMDDo
     bne .LAB_EC4C
     bra .LAB_EC58
 .LAB_EC54
-    seb adb_srq,ADBStatus
+    seb adb_srq,ADBStatus           ; Set SRQ flag
     bra .LAB_EC60
 .LAB_EC58
     seb adb_buscontention,ADBStatus
@@ -989,15 +989,15 @@ Power_Command
     rts
 readADB
     ldm #0,$1C                      
-    ldm #LastADBCMD,$1B                      
-    lda ADBCMDLength                ; ADB data length?
+    ldm #LastADBCMD,$1B             ; Point to last ADB command, status         
+    lda ADBCMDLength                ; Load length of ADB data
     clc
     adc #3                          ; Send three bytes, plus ADB data
     sta ByteCount
-    jsr ReturnDataToHost2
+    jsr ReturnDataToHost2           ; Send the data to the host
     bcs .exit
     bbs 1,$0,.exit
-    clb ADBInt,IntFlags
+    clb ADBInt,IntFlags             ; Clear interrupt
 .exit
     rts
 ADB_Command
