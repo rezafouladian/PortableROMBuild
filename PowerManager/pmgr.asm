@@ -7,6 +7,7 @@ ADBInt              =   0
 LastADBCMD          =   $5
 
 ADBStatus           =   $6
+adb_init            =   0
 adb_newcmd          =   1
 adb_autopoll        =   2
 adb_srq             =   3
@@ -259,14 +260,14 @@ CommandReceive
 .ADBAction
     ldm #7,VIA_Com
     ldm #Dir_Write,VIA_Com_DIR
-    lda ADBStatus
-    and #%101
-    sta ADBStatus
-    lda $3
-    sta ADBCMDLength
-    lda LastADBCMD
+    lda ADBStatus                   ; Get ADB status
+    and #%101                       ; Mask out all but bit 0 and 2
+    sta ADBStatus                   ; Save ADB status
+    lda $3                          ; Get ADB command length
+    sta ADBCMDLength                ; Save ADB command length
+    lda LastADBCMD                  ; Get last ADB command
     and #$F                         ; Check for a reset command
-    bne .ADBNotReset
+    bne .ADBNotReset                ; Branch if the command is not reset
     seb ADB_Out,Port_P4
     ldx #0
     jsr DelayLoop
@@ -281,7 +282,7 @@ CommandReceive
     seb adb_noreply,ADBStatus
     bra .ADBFinish
 .LAB_E98B
-    jsr FUN_ECC3
+    jsr ADBCMDDo2
     bcc .ADBFinish
     bbc adb_autopoll,ADBStatus,.ADBFinish
     bbc adb_srq,ADBStatus,.noADBAction
@@ -613,8 +614,8 @@ FUN_EB97
 ;
 ADBCMDDo
     lda ADBStatus
-    and %101
-    sta ADBStatus
+    and #%101                       ; Only bits 0 and 2
+    sta ADBStatus                   ; Save status flags
     lda LastADBCMD
     sta $4                          ; Save a copy of the last ADB command
     seb ADB_Out,Port_P4
@@ -624,7 +625,7 @@ ADBCMDDo
     clb ADB_Out,Port_P4
     ldx #6                          ; Load delay counter
     jsr DelayLoop
-    bbc ADB_In,Port_P4,.LAB_EC58
+    bbc ADB_In,Port_P4,.fail
     nop 
     ldy #8
     bra .LAB_EC10
@@ -639,7 +640,7 @@ ADBCMDDo
     rol $4
     bcc .LAB_EC21
     clb ADB_Out,Port_P4
-    bbc ADB_In,Port_P4,.LAB_EC58
+    bbc ADB_In,Port_P4,.fail
     bra .LAB_EC23
 .LAB_EC21
     jsr DelayExit
@@ -672,11 +673,11 @@ ADBCMDDo
     bbs ADB_In,Port_P4.LAB_EC54
     dex
     bne .LAB_EC4C
-    bra .LAB_EC58
+    bra .fail
 .LAB_EC54
     seb adb_srq,ADBStatus           ; Set SRQ flag
     bra .LAB_EC60
-.LAB_EC58
+.fail
     seb adb_buscontention,ADBStatus
     seb adb_error,ADBStatus
     clb ADB_Out,Port_P4
@@ -704,7 +705,7 @@ ADBCMDDo
     nop
     ldx #6
     jsr DelayLoop
-    bbc ADB_In,Port_P4,.LAB_EC58
+    bbc ADB_In,Port_P4,.fail
     bra .LAB_EC8D
 .LAB_EC88
     ldx #1
@@ -717,7 +718,7 @@ ADBCMDDo
     rol $4
     bcc .LAB_EC9E
     clb ADB_Out,Port_P4
-    bbc ADB_In,Port_P4,.LAB_EC58
+    bbc ADB_In,Port_P4,.fail
     bra .LAB_ECA0
 .LAB_EC9E
     jsr DelayExit
@@ -725,7 +726,7 @@ ADBCMDDo
     ldx #1
     jsr DelayLoop
     clb ADB_Out,Port_P4
-    bbc ADB_In,Port_P4,.LAB_EC58
+    bbc ADB_In,Port_P4,.fail
     dey
     bne .LAB_EC88
     ldy #8
@@ -741,7 +742,7 @@ ADBCMDDo
     clb ADB_Out,Port_P4
     clc
     rts
-FUN_ECC3
+ADBCMDDo2
     ldm #0,ADBCMDLength
     txs
     stx $2
@@ -755,8 +756,8 @@ FUN_ECC3
     dex
     bbc ADB_In,Port_P4,.LAB_ECE6
     bne .LAB_ECD2
-    bra .LAB_ECDD
-.LAB_ECDD
+    bra .fail
+.fail
     seb adb_error,ADBStatus
     seb adb_noreply,ADBStatus
     ldx $2
@@ -765,22 +766,22 @@ FUN_ECC3
     rts
 .LAB_ECE6
     ldx #3
-    bbs ADB_In,Port_P4,.LAB_ECDD
+    bbs ADB_In,Port_P4,.fail
 .LAB_ECEB
     bbs ADB_In,Port_P4,.LAB_ECF6
     dex
     bbs ADB_In,Port_P4,.LAB_ECF6
     bne .LAB_ECBB
-    bra .LAB_ECDD
+    bra .fail
 .LAB_ECF6
     nop
     nop
     nop
     nop
     bit $2
-    bbc ADB_In,Port_P4,.LAB_ECDD
-    bbc ADB_In,Port_P4,.LAB_ECDD
-    bbc ADB_In,Port_P4,.LAB_ECDD
+    bbc ADB_In,Port_P4,.fail
+    bbc ADB_In,Port_P4,.fail
+    bbc ADB_In,Port_P4,.fail
     bbc ADB_In,Port_P4,.LAB_ED28
     bbc ADB_In,Port_P4,.LAB_ED28
     bbc ADB_In,Port_P4,.LAB_ED28
@@ -792,7 +793,7 @@ FUN_ECC3
     bbc ADB_In,Port_P4,.LAB_ED28
     bbc ADB_In,Port_P4,.LAB_ED28
     bbc ADB_In,Port_P4,.LAB_ED28
-    bra .LAB_ECDD
+    bra .fail
 .LAB_ED28
     bbs ADB_In,Port_P4,.LAB_ED8E
     bbs ADB_In,Port_P4,.LAB_ED8B
@@ -814,7 +815,7 @@ FUN_ECC3
     bbs ADB_In,Port_P4,.LAB_ED61
     bbs ADB_In,Port_P4,.LAB_ED5E
 .LAB_ED5B
-    jmp .LAB_ECDD
+    jmp .fail
 .LAB_ED5E
     bbc ADB_In,Port_P4,.LAB_EDC5
 .LAB_ED61
@@ -882,7 +883,7 @@ FUN_ECC3
     beq .LAB_EDDA
     jmp .LAB_ED88
 .LAB_EDDA
-    jmp .LAB_ECDD
+    jmp .fail
 .LAB_EDDD
     sec
     rol A
@@ -913,7 +914,7 @@ FUN_ECC3
     dey
     bne .LAB_EE00
     ldx ADBCMDLength
-.LAB_EE0F
+.exit
     clc
     rts
 CMDTable
