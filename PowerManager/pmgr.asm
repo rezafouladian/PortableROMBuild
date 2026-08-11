@@ -1,4 +1,5 @@
 wake_time_on        =   4     
+sleeping            =   6
 ring_wake_on        =   7
 
 IntFlags            =   $1
@@ -458,7 +459,7 @@ BatteryManage
     cmp deadBatteryLevel
     bcs .LAB_EAD5
     seb battery_dead,PowerFlags
-    bbs 6,$0,.LAB_EAD5
+    bbs sleeping,$0,.LAB_EAD5
     bbc VIA_TEST,Port_P3,.LAB_EAD5
     jmp Sleep
 .LAB_EAD5
@@ -594,7 +595,7 @@ FUN_EB97
     jsr CombineTime
     sta Time
     bbc wake_time_on,$0,.LAB_EBE8
-    bbc 6,$0,.LAB_EBE8
+    bbc sleeping,$0,.LAB_EBE8
     bbc 5,$0,.LAB_EBE8
     lda $2D
     cmp timeA
@@ -1260,7 +1261,7 @@ Modem_Command
     bbs RING_DETECT,Port_P1,.CheckModemHook
     seb RingDetect,$13
 .CheckModemHook
-    bbs 3,In_Reg,.done
+    bbs OFF_HOOK,In_Reg,.done
     seb ModemHook,$13
 .done
     ldm #1,ByteCount
