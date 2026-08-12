@@ -78,6 +78,7 @@ OFF_HOOK            =   3
 
 ; A/D control register
 AD_Ctrl_Reg         =   $F3
+AD_Start_Addr       =   $F2
 AD_Conv             =   3
 
 Int_Ctrl_Reg        =   $FE
@@ -137,6 +138,13 @@ ADB_Out             =   0
 ADB_In              =   1
 DISP_BLANK          =   2           ; DISP_BLANK* - Turns the display off (active low)
 MODEM_INS           =   3           ; MODEM_INS* - When a modem is installed (active low)
+
+ModemPwr            =   0
+ModemAorB           =   1
+RingWakeEnable      =   2
+ModemInstalled      =   3
+RingDetect          =   4
+ModemHook           =   5
 
 
 .org    $E800
@@ -394,7 +402,7 @@ ReturnDataToHost2
     jsr SendByte
     bcs ReturnDataExit
     tst $12
-    bcs ReturnDataExit
+    beq ReturnDataExit
     ldy #0
 ReturnDataLoop
     lda ($1B),Y
@@ -475,6 +483,7 @@ BatteryManage
     adc $20
     sta $20
     lda BatteryLevel
+    cmp lowBatteryLevel
     bcc .LAB_EABC
     bbc battery_low,PowerFlags,.LAB_EAD5
     clb battery_low,PowerFlags
@@ -626,7 +635,7 @@ FUN_EB97
     sta Time
     bbc wake_time_on,$0,.LAB_EBE8
     bbc sleeping,$0,.LAB_EBE8
-    bbc 5,$0,.LAB_EBE8
+    bbs 5,$0,.LAB_EBE8
     lda $2D
     cmp timeA
     bne .LAB_EBE8
@@ -638,6 +647,7 @@ FUN_EB97
     bne .LAB_EBE8
     lda $2A
     cmp timeD
+    bne .LAB_EBE8
     seb 5,$0
 .LAB_EBE8
     jsr BatteryManage
@@ -775,7 +785,7 @@ ADBCMDDo
     rts
 ADBCMDDo2
     ldm #0,ADBCMDLength
-    txs
+    tsx
     stx $2
     ldx #$10
     txs
@@ -945,6 +955,11 @@ ADBCMDDo2
     dey
     bne .LAB_EE00
     ldx ADBCMDLength
+.LAB_EE09
+    pla
+    sta 7,X
+    dex
+    bne .LAB_EE09
 .exit
     clc
     rts
@@ -1034,12 +1049,12 @@ readADB
     rts
 ADB_Command
     lda CommandByte
-    cmp cmd_pMgrADB
+    cmp #cmd_pMgrADB
     beq .pMgrADB
-    cmp cmd_pMgrADBoff
+    cmp #cmd_pMgrADBoff
     bne .bad_command
 .pMgrADBoff
-    ldm #1,ADBStatus
+    ldm #0,ADBStatus
     clb ADBInt,IntFlags
     clc
     rts
@@ -1685,6 +1700,7 @@ TestTableA
 .byte   16
 .byte   32
 .byte   64
+.byte   128
 TestTableB
 .byte   240
 .byte   225
