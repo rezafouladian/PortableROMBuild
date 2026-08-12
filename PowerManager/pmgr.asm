@@ -31,13 +31,40 @@ battery_dead        =   3
 battery_low         =   4
 charger_changed     =   5
 
+BatteryLevel        =   $1E
 ref5V_Level         =   $1F
+
+timeD               =   $25
+timeC               =   $26
+timeB               =   $27
+timeA               =   $28
+Time                =   $29         ; Checksum of timeA..timeD
+
+wakeupTimeA         =   $2A
+wakeupTimeB         =   $2B
+wakeupTimeC         =   $2C
+wakeupTimeD         =   $2D
 lowBatteryLevel     =   $71
 deadBatteryLevel    =   $72
 HICHGLevel          =   $73
 
+cmd_pMgrADB         =   $20
+cmd_pMgrADBoff      =   $21
 cmd_readADB         =   $28
+cmd_timeWrite       =   $30
+cmd_pramWrite       =   $31
+cmd_timeRead        =   $38
+cmd_pramRead        =   $39
+cmd_batteryRead     =   $68
+cmd_batteryNow      =   $69
 cmd_readINT         =   $78
+cmd_sleepReq        =   $7F
+cmd_timerSet        =   $80
+cmd_disableWakeUp   =   $82
+cmd_writePmgrRAM    =   $E0
+cmd_readPmgrVers    =   $EA
+cmd_PmgrSelfTest    =   $EC
+cmd_PmgrSoftReset   =   $EF
 
 readBit             =   3           ; Commands $x8-$xF are read commands
 
@@ -73,6 +100,9 @@ SOUND_PWR           =   5
 MINUS_5V            =   6
 SYS_PWR             =   7
 
+Port_P0             =   $E0
+Port_P0_DIR         =   $E1
+
 Port_P1             =   $E2
 Port_P1_DIR         =   $E3
 NC                  =   0           ; Not connected, probably for testing
@@ -101,7 +131,7 @@ PMINT               =   5           ; PMINT*
 PMACK               =   6           ; PMACK*
 PMREQ               =   7           ; PMREQ*
 
-Port_P4             =   $E9
+Port_P4             =   $EA
 Port_P4_DIR         =   $EB
 ADB_Out             =   0
 ADB_In              =   1
@@ -195,7 +225,7 @@ InitPorts
     bcc LAB_E8E1
 LAB_E8DE
     ldm #4,$2E
-LAB_E8E1:
+LAB_E8E1
     lda $2E
     sta $13
     jsr SetContrast
@@ -230,12 +260,12 @@ CommandReceive
     jsr ReceiveCommand
     bcs CommandReceive
     lda CommandByte
-    cmp cmd_readINT
+    cmp #cmd_readINT
     bne .readADBCheck
     jsr readINT
     bra CommandReceive
-.readADBCheck:
-    cmp cmd_readADB
+.readADBCheck
+    cmp #cmd_readADB
     bne .OtherCommands
     jsr readADB
     bra CommandReceive
@@ -649,7 +679,7 @@ ADBCMDDo
     ldx #1
     jsr DelayLoop
     clb ADB_Out,Port_P4
-    bbc ADB_In,Port_P4
+    bbc ADB_In,Port_P4,.fail
     dey
     bne .LAB_EC0B
     ldx #1
@@ -671,7 +701,7 @@ ADBCMDDo
     bne .LAB_EC44
     ldx #19
 .LAB_EC4C
-    bbs ADB_In,Port_P4.LAB_EC54
+    bbs ADB_In,Port_P4,.LAB_EC54
     dex
     bne .LAB_EC4C
     bra .fail
@@ -772,7 +802,7 @@ ADBCMDDo2
     bbs ADB_In,Port_P4,.LAB_ECF6
     dex
     bbs ADB_In,Port_P4,.LAB_ECF6
-    bne .LAB_ECBB
+    bne .LAB_ECEB
     bra .fail
 .LAB_ECF6
     nop
@@ -875,7 +905,7 @@ ADBCMDDo2
     bcc .LAB_EDED
     pha
     lda #1
-    bbs ADB_In,Port_P4.LAB_EDD4
+    bbs ADB_In,Port_P4,.LAB_EDD4
     dey
     beq .LAB_EDDA
     jmp .LAB_ED34
@@ -906,7 +936,7 @@ ADBCMDDo2
     adc #$A
     sta ADBCMDLength
     tay
-    beq #$EF0F
+    beq .exit
     ldx #8
 .LAB_EE00
     lda 8,X
@@ -1041,7 +1071,7 @@ ADB_Command
 Time_PRAM_Command
     bbs readBit,CommandByte,.timeRead
     lda CommandByte
-    cmp cmd_timeWrite
+    cmp #cmd_timeWrite
     bne .pramWrite
 .timeWrite
     ldm #$25,$1B
@@ -1052,7 +1082,7 @@ Time_PRAM_Command
     sta Time
     rts
 .pramWrite
-    cmp cmd_pramWrite
+    cmp #cmd_pramWrite
     bne .xPramWrite
     ldm #$3F,$1B
     ldm #0,$1C
@@ -1080,7 +1110,7 @@ Time_PRAM_Command
     rts
 .timeRead
     lda CommandByte
-    cmp cmd_timeRead
+    cmp #cmd_timeRead
     bne .pramRead
     ldm #timeD,WriteLocation
     ldm #0,WriteLocation+1
@@ -1088,7 +1118,7 @@ Time_PRAM_Command
     jsr ReturnDataToHost2
     rts
 .pramRead
-    cmp cmd_pramRead
+    cmp #cmd_pramRead
     bne .xPramRead
     ldm #0,$1C
     ldm #$3F,$1B
@@ -1126,7 +1156,7 @@ FUN_EF84
     lda #0
     clc
 .LAB_EF8B
-    adc #$2F,X
+    adc $2F,X
     inx
     bpl .LAB_EF8B
     sta $2
@@ -1136,7 +1166,7 @@ FUN_EF84
     bne .LAB_EFA9
     ldx #0
 .LAB_EF9C
-    ora #$2F,X
+    ora $2F,X
     bne .LAB_EFA9
     inx
     bpl .LAB_EF9C
@@ -1272,9 +1302,9 @@ Modem_Command
 ; Read power status and battery voltage
 Battery_Command
     lda CommandByte
-    cmp cmd_batteryRead
+    cmp #cmd_batteryRead
     beq .batteryRead
-    cmp cmd_batteryNow
+    cmp #cmd_batteryNow
     bne .exit
     jsr batteryNow
 .batteryRead
@@ -1303,7 +1333,7 @@ readINT
 ; Sleep_Command
 Sleep_Command
     lda CommandByte
-    cmp cmd_sleepReq
+    cmp #cmd_sleepReq
     bne .fail
     ldm #4,ByteCount
     jsr WriteToLocation
@@ -1402,7 +1432,7 @@ Sleep
     bpl .LAB_F134
     jsr FUN_EB97
     dex
-    bne LAB_F134
+    bne .LAB_F134
     seb KBD_RST,Port_P1             ; Bring keyboard controller out of reset
     seb SYS_RST,Port_P3             ; Bring system out of reset
     clb Int2_Req,Int_Ctrl_Reg
@@ -1412,7 +1442,7 @@ Sleep
 ; Timer_Command
 Timer_Command
     lda CommandByte
-    cmp cmd_timerSet
+    cmp #cmd_timerSet
     bne .disableWakeUp
 .timerSet
     bbs readBit,CommandByte,.timerRead  ; Useless check
@@ -1423,7 +1453,7 @@ Timer_Command
     seb wake_time_on,$0
     rts
 .disableWakeUp
-    cmp cmd_disableWakeUp
+    cmp #cmd_disableWakeUp
     bne .timerRead
     clb wake_time_on,$0
     rts
@@ -1473,14 +1503,14 @@ Sound_Command
 ; PMGR_Command
 PMGR_Command
     lda CommandByte
-    cmp cmd_PmgrSoftReset
+    cmp #cmd_PmgrSoftReset
     bne .PmgrSelfTest
 .PmgrSoftReset
     jsr ReturnDataToHost2
     bcs .fail
     jmp InitPorts
 .PmgrSelfTest
-    cmp cmd_PmgrSelfTest
+    cmp #cmd_PmgrSelfTest
     bne .readPmgrVers
     ldm #0,$13
     jsr SelfTest1
@@ -1498,7 +1528,7 @@ PMGR_Command
     jsr ReturnDataToHost
     rts
 .readPmgrVers
-    cmp cmd_readPmgrVers
+    cmp #cmd_readPmgrVers
     bne .LAB_F200
     lda PMVers1
     sta $13
@@ -1522,7 +1552,7 @@ PMGR_Command
     dex
     beq .LAB_F22A
     lda CommandByte
-    cmp cmd_writePmgrRAM
+    cmp #cmd_writePmgrRAM
     bne .LAB_F22E
     ldy #0
 .writeLoop
@@ -1573,7 +1603,7 @@ SelfTest1
     ldy #0
 .LAB_F265
     inc $1C
-    bne .LAB_249
+    bne .LAB_F249
     ldx $14
     tay
     ora $14
