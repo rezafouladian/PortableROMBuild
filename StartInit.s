@@ -1,4 +1,3 @@
-            INCLUDE 'ROMTools/Include.s'
             INCLUDE 'HardwareEqu.s'
             INCLUDE 'ConstEqu.s'
             INCLUDE 'Orphan.s'
@@ -11,13 +10,6 @@
 PortableAbs EQU     0
             ENDIF
             
-            IF PortableAbs
-            opt     o10-                            ; Prevent optimization from add/sub to lea
-            opt     o4-                             ; Prevent optimization from move.l to moveq
-            opt     ol-
-            opt     og-
-            opt     o11-
-            ENDIF
 
             ; Add PC to JMP when matching original ROM
             macro   jpp
@@ -6210,9 +6202,9 @@ EDiskOpen:
             moveq   #0,D5
             move    SR,-(SP)
             ori     #HiIntMask,SR
-            move.l  BusErrorVector,-(SP)
+            move.l  BusErrVct,-(SP)
             lea     .L1,A0
-            move.l  A0,BusErrorVector
+            move.l  A0,BusErrVct
             movea.l SP,A2
             moveq   #8,D0
             and.w   AccessBase,D0
@@ -6229,7 +6221,7 @@ EDiskOpen:
             jsr     (A0)
 .L1:
             movea.l A2,SP
-            move.l  (SP)+,BusErrorVector
+            move.l  (SP)+,BusErrVct
             move    (SP)+,SR
             moveq   #0,D1
             moveq   #0,D2
@@ -6348,9 +6340,9 @@ CreateEDrive:
 CheckForRomDisk:
             move    SR,-(SP)                        ; Save old interrupt mask
             ori     #HiIntMask,SR                   ; Disable interrupts
-            move.l  BusErrorVector,-(SP)            ; Save old bus error vector
+            move.l  BusErrVct,-(SP)            ; Save old bus error vector
             lea     .NotFound,A0                    ; New handler address
-            move.l  A0,BusErrorVector               ; Setup bus error handler
+            move.l  A0,BusErrVct               ; Setup bus error handler
             movea.l SP,A4                           ; Mark the stack
             lea     .HeaderTemplate,A3              ; Point to expected values
             lea     (HdrBlockSize,A2),A0            ; Point to header data
@@ -6360,7 +6352,7 @@ CheckForRomDisk:
             dbne    D0,.SigCmpLoop
 .NotFound:
             movea.l A4,SP                           ; Pop stack in case of bus error
-            move.l  (SP)+,BusErrorVector            ; Restore bus error vector
+            move.l  (SP)+,BusErrVct            ; Restore bus error vector
             move    (SP)+,SR                        ; Restore interrupt mask
             addq.w  #1,D0                           ; See if we had a match
             bne.b   .Done                           ; Exit if not

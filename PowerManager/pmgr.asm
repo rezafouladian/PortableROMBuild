@@ -34,16 +34,19 @@ charger_changed     =   5
 BatteryLevel        =   $1E
 ref5V_Level         =   $1F
 
+; Time counter, timeA = LSB ... timeD = MSB
 timeD               =   $25
 timeC               =   $26
 timeB               =   $27
 timeA               =   $28
 Time                =   $29         ; Checksum of timeA..timeD
 
+; Wake-up time. Note wakeupTimeA is the MSB and pairs with timeD.
 wakeupTimeA         =   $2A
 wakeupTimeB         =   $2B
 wakeupTimeC         =   $2C
 wakeupTimeD         =   $2D
+
 lowBatteryLevel     =   $71
 deadBatteryLevel    =   $72
 HICHGLevel          =   $73
@@ -89,6 +92,12 @@ AD_Int_Req          =   5           ; AD interrupt request bit
                                     ; When bit 3 of A/D control register = 1,
                                     ; the interrupt is from A/D
 Int1_Req            =   7           ; Interrupt 1 request bit
+
+Timer_1_2_Prescaler =   $F9
+Timer_1             =   $FA
+Timer_2             =   $FB
+Timer_X_Prescaler   =   $FC
+Timer_Ctrl_Reg      =   $FF
 
 PWM_Ctrl_Reg        =   $F5
 
@@ -139,6 +148,7 @@ ADB_In              =   1
 DISP_BLANK          =   2           ; DISP_BLANK* - Turns the display off (active low)
 MODEM_INS           =   3           ; MODEM_INS* - When a modem is installed (active low)
 
+; Modem_Command data bits (in $13)
 ModemPwr            =   0
 ModemAorB           =   1
 RingWakeEnable      =   2
@@ -652,6 +662,7 @@ FUN_EB97
 .LAB_EBE8
     jsr BatteryManage
     rts
+; ADBCMDDo
 ;
 ADBCMDDo
     lda ADBStatus
@@ -1013,7 +1024,7 @@ Power_Command
     clc
     rts
 .TurnOn
-    and #$7F
+    and #%01111111
     ora Port_P0
     sta $2
     lda $13,X
